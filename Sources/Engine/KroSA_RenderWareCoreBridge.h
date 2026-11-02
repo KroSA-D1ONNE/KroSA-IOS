@@ -26,6 +26,7 @@ int krosaGetLastGeometryDrawFlags(void);
 int krosaGetLastGeometryPixel(int component);
 int krosaGetLastGeometryFramebuffer(void);
 int krosaGetLastGeometryViewport(int component);
+int krosaGetLastGeometryMetric(int metric);
 
 #ifdef __cplusplus
 }
