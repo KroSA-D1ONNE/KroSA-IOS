@@ -96,3 +96,27 @@ The supplied IPA also embeds `bass.framework` (audio runtime) and `objective_c.f
 4. The bridge and engine availability checks still need exact ABI recovery. Do not call `ReSAIOSHostStart` with a guessed structure, and do not assume the original app's Flutter lifecycle is required or can be transplanted wholesale.
 
 This follow-up is based on static inspection of the user-provided IPA only. No engine launch, network connection, or physical-device test has been performed.
+
+
+## Recovered launcher initialization sequence (2026-11-02)
+
+The original arm64 launcher executable was disassembled at the Swift method call sites. This gives a concrete ordering for the setup phases:
+
+1. `IOSLauncherBridge.configureEngineBootstrap(...)` resolves the install/root URL and invokes `SADataBootstrap.provision(documentsRoot:)`.
+2. If provisioning throws, the launcher logs `ReSA iOS GXT bootstrap rejected launch: %@` and returns failure. The same method then obtains the Documents path and calls `ReSAIOSConfigureDocumentsRoot`; the path is passed as a UTF-8 C string (the disassembly shows a pointer plus a trailing NUL allocation).
+3. `IOSLauncherBridge.prepareAlLoader()` obtains `alLoaderRootURL`, resolves the bundled source path `alloader.framework/al_loader/lib`, and reads the bundled `.al_lib_manifest`. The manifest is used to validate/copy the Lua runtime tree into its prepared destination; the method returns false on filesystem/manifest failure.
+4. Only after these preparation phases does the launcher proceed toward its engine lifecycle/handoff. The bridge also contains a separate `validatedHandoffRoot` routine, so the final root is validated rather than blindly trusting an arbitrary path.
+
+The IPA's alloader manifest contains 64 relative file entries totaling 5,132,560 bytes, and every listed file is present in the supplied framework tree. This confirms that the Lua runtime is a substantial bundled dependency, not a few optional scripts. The seven GXT files in the original app's top-level `TEXT/` bundle directory total approximately 9.9 MB. The launcher bootstrap uses CryptoKit SHA-256 symbols and a manifest of required files; it is therefore designed to validate source assets before provisioning rather than simply checking that a folder exists.
+
+### What can safely be ported now
+
+- Recreate the filesystem/bootstrap behavior in a KroSA-owned Swift component once the required source resources are legally and technically available: validate all bundled GXT inputs, provision them atomically into `Documents/TEXT`, and verify SHA-256 before accepting the result.
+- Recreate the alloader provisioning as a manifest-driven operation: validate every relative path and expected byte count, reject path traversal, stage/copy the 64 files, then write the completion manifest only after all copies succeed. The original `.al_lib_manifest` is a list of relative path plus byte count separated by a tab; it does not, by itself, provide content hashes.
+- Keep the original framework's ABI calls behind a narrow adapter. The disassembly does not provide enough evidence to safely construct the undocumented `ReSAIOSHostStart` configuration structure.
+
+### Remaining blocker
+
+This sequence recovers setup order and resource provisioning, not the engine's internal start ABI. In particular, `ReSAIOSEngineAvailable` in the supplied ReSAEngine binary still disassembles to an unconditional false return. Before enabling a Play button, we must establish whether this ReSA package is a placeholder build, whether a separate engine binary/registration step is missing, or whether the availability symbol is intentionally a permanent negative gate. A successful Swift launcher build cannot answer that question.
+
+No GXT/game assets or ReSA binaries have been copied into the public KroSA repository. The analysis above describes files from the user-supplied IPA only.
