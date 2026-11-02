@@ -18,7 +18,7 @@ int krosaLibrwGL3InitSmokeTest(int width, int height);
 
 /// Builds and draws a triangle through librw Geometry + the GL3 object pipeline,
 /// within the same Engine/EAGL lifecycle. Query init status after the call.
-int krosaLibrwGL3GeometrySmokeTest(int width, int height);
+int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angleY, float angleX, float cameraDistance);
 int krosaGetLastGeometryInitStatus(void);
 
 /// Bit flags captured inside librw defaultRenderCB before/after glDrawElements.
