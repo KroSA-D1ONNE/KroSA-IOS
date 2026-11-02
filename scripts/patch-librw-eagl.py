@@ -83,6 +83,16 @@ edit("src/engine.cpp", [
      '\tif(!engine->device.system(DEVICEINIT, nil, 0))\n\t\treturn 0;\n\n\tEngine::s_plglist.construct(engine);')
 ])
 
+
+# TEMPORARY ISOLATION TEST: keep librw's original vertex shader, attributes,
+# matrices and draw path, but replace only its fragment shader with solid green.
+# The framebuffer snapshot in defaultRenderCB is taken immediately after this
+# original librw draw and before the separate diagnostic bypass draw.
+edit("src/gl/shaders/simple_fs_gl.inc", [
+    ('const char *simple_frag_src =\n"uniform sampler2D tex0;\\n"\n\n"FSIN vec4 v_color;\\n"\n"FSIN vec2 v_tex0;\\n"FSIN float v_fog;\\n"\n\n"void\\n"\n"main(void)\\n"\n"{\\n"\n"\\tvec4 color = v_color*texture(tex0, vec2(v_tex0.x, 1.0-v_tex0.y));\\n"\n"\\tcolor.rgb = mix(u_fogColor.rgb, color.rgb, v_fog);\\n"\n"\\tDoAlphaTest(color.a);\\n"\n"\\tFRAGCOLOR(color);\\n"\n"}\\n"\n\n";',
+     'const char *simple_frag_src =\\n"precision mediump float;\\n"\\n"void main(void) { FRAGCOLOR(vec4(0.0, 1.0, 0.0, 1.0)); }\\n";')
+])
+
 print("Applied iOS EAGL host patch to pinned librw source")
 
 # Instrument the actual GL3 draw callback, while its shader, VBO, IBO and
