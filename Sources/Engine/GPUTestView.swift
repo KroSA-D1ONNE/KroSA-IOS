@@ -10,6 +10,7 @@ struct GPUTestView: View {
     @State private var nativeGLStatus = "PUENTE C++ SIN PROBAR"
     @State private var librwGL3Status = "LIBRW GL3 / EAGL SIN PROBAR"
     @State private var geometryStatus = "GEOMETRÍA LIBRW SIN PROBAR"
+    @State private var showGLKViewTest = false
 
     var body: some View {
         ZStack {
@@ -70,6 +71,27 @@ struct GPUTestView: View {
                 Text(nativeGLStatus)
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundStyle(nativeGLStatus.contains("OK") ? .green : .orange)
+
+                Button("INICIAR PRUEBA GLKVIEW") {
+                    showGLKViewTest.toggle()
+                }
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundStyle(.black)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 12)
+                .background(Color.green)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                if showGLKViewTest {
+                    GLKClearTestView()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 190)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    Text("Si ves el panel verde, GLKView creó el framebuffer y ejecutó glClear.")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundStyle(.green)
+                        .multilineTextAlignment(.center)
+                }
 
                 Text(librwGL3Status)
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
@@ -278,6 +300,43 @@ private struct GLES2TextureView: UIViewRepresentable {
                     glDeleteTextures(1, &textureID)
                 }
             }
+        }
+    }
+}
+
+
+/// Isolated physical-device test: GLKView creates its drawable and clears it.
+/// It deliberately does not call librw, create shaders, or allocate textures.
+private struct GLKClearTestView: UIViewRepresentable {
+    func makeCoordinator() -> Renderer { Renderer() }
+
+    func makeUIView(context: Context) -> GLKView {
+        let glContext = EAGLContext(api: .openGLES2)!
+        EAGLContext.setCurrent(glContext)
+        let view = GLKView(frame: .zero, context: glContext)
+        view.delegate = context.coordinator
+        view.drawableColorFormat = .RGBA8888
+        view.drawableDepthFormat = .formatNone
+        view.enableSetNeedsDisplay = true
+        view.isOpaque = true
+        DispatchQueue.main.async { view.setNeedsDisplay() }
+        return view
+    }
+
+    func updateUIView(_ uiView: GLKView, context: Context) {
+        uiView.setNeedsDisplay()
+    }
+
+    final class Renderer: NSObject, GLKViewDelegate {
+        func glkView(_ view: GLKView, drawIn rect: CGRect) {
+            guard let glContext = view.context,
+                  EAGLContext.setCurrent(glContext) else { return }
+            let width = max(1, GLsizei(view.bounds.width * view.contentScaleFactor))
+            let height = max(1, GLsizei(view.bounds.height * view.contentScaleFactor))
+            glViewport(0, 0, width, height)
+            glClearColor(0.04, 0.78, 0.22, 1.0)
+            glClear(GLbitfield(GL_COLOR_BUFFER_BIT))
+            glFlush()
         }
     }
 }
