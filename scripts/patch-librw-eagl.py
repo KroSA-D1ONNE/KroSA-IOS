@@ -101,7 +101,7 @@ c_nl = chr(92) + "n"
 replacement = "\n".join([
     "const char *simple_frag_src =",
     '"precision mediump float;' + c_nl + '"',
-    '"void main(void) { FRAGCOLOR(vec4(v_color.rgb, 1.0)); }' + c_nl + '" ;
+    '"void main(void) { FRAGCOLOR(vec4(v_color.rgb, 1.0)); }' + c_nl + '";',
 ]) 
 shader_source = shader_source[:shader_start] + replacement + shader_source[shader_end:]
 p.write_text(shader_source)
