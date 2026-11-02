@@ -3,6 +3,8 @@ options:
   bundleIdPrefix: com.krosa
   deploymentTarget:
     iOS: "15.1"
+  projectFormat: xcode15_3
+  xcodeVersion: "15.4"
   createIntermediateGroups: true
 settings:
   base:
