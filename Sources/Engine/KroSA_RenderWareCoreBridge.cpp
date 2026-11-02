@@ -71,6 +71,15 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
     if (width <= 0 || height <= 0 ||
         rw::Engine::state != rw::Engine::Dead || rw::engine != nullptr)
         return -1;
+
+    // GLKView owns a non-zero drawable framebuffer; preserve it across librw setup.
+    GLint hostFramebuffer = 0;
+    GLint hostViewport[4] = {0, 0, 0, 0};
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &hostFramebuffer);
+    glGetIntegerv(GL_VIEWPORT, hostViewport);
+    if (hostFramebuffer == 0)
+        return -7;
+
     if (!rw::Engine::init())
         return -2;
 
@@ -131,7 +140,14 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
                 };
                 rw::gl3::setProjectionMatrix(const_cast<float*>(identity));
                 rw::gl3::setViewMatrix(const_cast<float*>(identity));
-                glViewport(0, 0, width, height);
+
+                // Restore GLKView's drawable: librw's host backend assumes FBO 0.
+                glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)hostFramebuffer);
+                glViewport(hostViewport[0], hostViewport[1], hostViewport[2], hostViewport[3]);
+                const GLenum framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+                if (framebufferStatus != GL_FRAMEBUFFER_COMPLETE) {
+                    result = -100 - (int)framebufferStatus;
+                } else {
                 rw::SetRenderState(rw::ZTESTENABLE, 0);
                 rw::SetRenderState(rw::ZWRITEENABLE, 0);
                 rw::SetRenderState(rw::CULLMODE, rw::CULLNONE);
@@ -146,9 +162,14 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
                 // Preserve the sampled RGB in the error code to diagnose the exact output.
                 result = renderError != GL_NO_ERROR ? -6 :
                     (greenPixel ? 1 : -(1000 + centerPixel[0] * 65536 + centerPixel[1] * 256 + centerPixel[2]));
+                }
             }
         }
     }
+
+    // Leave GLKView's framebuffer and viewport intact for its presentation.
+    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)hostFramebuffer);
+    glViewport(hostViewport[0], hostViewport[1], hostViewport[2], hostViewport[3]);
 
     if (material) material->destroy();
     if (geometry) geometry->destroy();
