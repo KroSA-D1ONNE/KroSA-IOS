@@ -78,3 +78,21 @@ The launcher therefore owns important startup behavior that is not part of the t
 The strings `engine-not-linked`, `engine-not-ready`, and `bootstrap-ready-engine-not-linked` occur in the supplied app. Combined with the framework's unconditional-false `ReSAIOSEngineAvailable`, this strengthens the conclusion that the supplied binary set may intentionally lack a linked/available engine implementation, or requires a separate registration/linkage stage. We must resolve this before writing the KroSA adapter.
 
 The next reverse-engineering target is the call sequence inside the original `ReSAEngineLifecycle.start`, plus `IOSLauncherBridge.configureEngineBootstrap` and `prepareAlLoader`. Recover the exact start-result structure and the host configuration struct layout before any FFI call. No guessed ABI has been added to KroSA.
+
+
+## Follow-up inspection: bundled resources and loader
+
+A full IPA directory listing shows that the original app bundle contains a top-level `TEXT/` resource directory with seven GXT language files: `american.gxt`, `french.gxt`, `german.gxt`, `italian.gxt`, `japanese.gxt`, `russian.gxt`, and `spanish.gxt`. The launcher contains an explicit `SADataBootstrap` class with a manifest of `RequiredFile` entries, source validation, temporary staging, SHA-256 calculation, and a `provision(documentsRoot:)` operation. Diagnostics explicitly mention that the Documents/TEXT bootstrap can reject the launch. This means the original launcher does not merely expect a GTA folder: it stages and validates bundled TEXT/GXT resources into the user Documents root before handoff.
+
+The original launcher also has an explicit `prepareAlLoader() -> Bool` phase and an `alLoaderRootURL` property. The framework's `alloader` binary exports Lua 5.1-style APIs plus SA-MP event/packet hooks such as `_AL_OutgoingPacket`, `_AL_OutgoingRpc`, `_AL_IncomingPacket`, `_AL_IncomingRpc`, and `_AL_Connection`. Its framework bundle contains an `al_loader/lib/.al_lib_manifest` inventory of Lua modules, including `samp/events`, `samp/raknet`, and `samp/synchronization`. This is evidence that the alloader framework and its bundled Lua tree are a coupled runtime package; embedding only the Mach-O framework would be incomplete.
+
+The supplied IPA also embeds `bass.framework` (audio runtime) and `objective_c.framework`, in addition to Flutter and app/ad frameworks. KroSA should not blindly copy every framework: first determine which are required by the native ReSA host path, then embed only those dependencies. The ReSAEngine binary directly links Apple audio, video, graphics, motion, Bluetooth, Metal/OpenGLES, UIKit, WebKit, Security, zlib, and libc++ frameworks. The alloader binary's direct dependencies are libc++ and libSystem.
+
+### Confirmed integration implications
+
+1. KroSA's Documents directory is a sensible user-visible root, but before engine handoff it must contain a valid `TEXT/` directory provisioned with the required GXT files and any manifest validation expected by the engine.
+2. The original app's GXT source files live in its app bundle at `ReSALauncher.app/TEXT`; they are not in the two framework bundles. They have not been copied into the KroSA repository.
+3. The alloader runtime needs its accompanying `al_loader/lib` tree and manifest. It is not sufficient to link `alloader.framework` alone.
+4. The bridge and engine availability checks still need exact ABI recovery. Do not call `ReSAIOSHostStart` with a guessed structure, and do not assume the original app's Flutter lifecycle is required or can be transplanted wholesale.
+
+This follow-up is based on static inspection of the user-provided IPA only. No engine launch, network connection, or physical-device test has been performed.
