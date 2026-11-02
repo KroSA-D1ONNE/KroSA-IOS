@@ -139,9 +139,18 @@ struct GPUTestView: View {
                                 : "LIBRW GL3 / EAGL: ERROR · ETAPA \(result)"
                         },
                         onGeometryDrawn: { result in
+                            let flags = krosaGetLastGeometryDrawFlags()
+                            let red = krosaGetLastGeometryPixel(0)
+                            let green = krosaGetLastGeometryPixel(1)
+                            let blue = krosaGetLastGeometryPixel(2)
+                            let framebuffer = krosaGetLastGeometryFramebuffer()
+                            let vx = krosaGetLastGeometryViewport(0)
+                            let vy = krosaGetLastGeometryViewport(1)
+                            let vw = krosaGetLastGeometryViewport(2)
+                            let vh = krosaGetLastGeometryViewport(3)
                             geometryStatus = result == 1
                                 ? "GEOMETRÍA LIBRW: OK · TRIÁNGULO DIBUJADO"
-                                : "GEOMETRÍA LIBRW: ERROR · CÓDIGO \(result)"
+                                : "GEOMETRÍA LIBRW: ERROR \(result) · FLAGS \(flags) · PIX \(red),\(green),\(blue) · FBO \(framebuffer) · VP \(vx),\(vy),\(vw),\(vh)"
                         }
                     )
                     .frame(maxWidth: .infinity)
