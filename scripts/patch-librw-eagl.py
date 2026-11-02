@@ -100,7 +100,7 @@ shader = shader[:begin] + '''const char *simple_frag_src =
 "FSIN vec4 v_color;\\n"
 "FSIN vec2 v_tex0;\\n"
 "FSIN float v_fog;\\n"
-"void main(void) { vec4 color = v_color * texture(tex0, vec2(v_tex0.x, 1.0-v_tex0.y)); color.rgb = mix(u_fogColor.rgb, color.rgb, v_fog); FRAGCOLOR(color); }\\n"
+"void main(void) { vec4 color = v_color * texture(tex0, vec2(v_tex0.x, 1.0-v_tex0.y)); color.rgb = mix(vec3(1.0, 0.0, 1.0), color.rgb, v_fog); FRAGCOLOR(color); }\\n"
 ;''' + shader[finish + 2:]
 shader_path.write_text(shader)
 
