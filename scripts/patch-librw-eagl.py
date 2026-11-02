@@ -95,23 +95,7 @@ edit("src/gl/gl3device.cpp", [
      "\tuniformStateDirty[RWGL_FOGCOLOR] = true;")
 ])
 
-# Isolate the interpolated vertex color. The fog-factor probe showed v_fog=1,
-# so fog is disabled as expected; now bypass texture/fog/alpha-test and inspect
-# the color produced by librw's original vertex shader.
-shader_path = ROOT / "src/gl/shaders/simple_fs_gl.inc"
-shader = shader_path.read_text()
-begin = shader.find("const char *simple_frag_src =")
-if begin < 0:
-    raise SystemExit("simple_fs_gl.inc: fragment shader declaration not found")
-finish = shader.find("\n;", begin)
-if finish < 0:
-    raise SystemExit("simple_fs_gl.inc: fragment shader terminator not found")
-shader = shader[:begin] + '''const char *simple_frag_src =
-"FSIN vec4 v_color;\\n"
-"void main(void) { FRAGCOLOR(v_color); }\\n"
-;''' + shader[finish + 2:]
-shader_path.write_text(shader)
-
+# Keep upstream simple_fs_gl.inc unchanged: the next probe must sample real textures.
 # Next isolate raw mesh vertex colors from librw's lighting/material pipeline.
 # The previous on-device probe showed a green diffuse result, so bypass ambient,
 # dynamic lighting and material multiplication while preserving in_color.
