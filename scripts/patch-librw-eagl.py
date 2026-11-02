@@ -92,10 +92,11 @@ shader_start = shader_source.index("const char *simple_frag_src =")
 # semicolon on its own line (not a trailing `";`).
 # The upstream declaration closes after its final adjacent string,
 # followed by a blank line and a standalone semicolon.
-terminator = shader_source.find("\\n\\n;", shader_start)
-if terminator < 0:
-    raise RuntimeError("Could not find final blank-line semicolon of simple fragment shader declaration")
-shader_end = terminator + 3
+# The upstream file contains one C string declaration; use its final
+# semicolon as the declaration terminator (GLSL has earlier semicolons).
+shader_end = shader_source.rfind(";") + 1
+if shader_end <= shader_start:
+    raise RuntimeError("Could not find end of simple fragment shader declaration")
 c_nl = chr(92) + "n"
 replacement = "\n".join([
     "const char *simple_frag_src =",
