@@ -6,9 +6,9 @@ import OpenGLES
 /// UV coordinates and GLKBaseEffect's GLES shader pipeline.
 struct GPUTestView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var nativeGLStatus = "EAGL CLEAR AISLADO"
+    @State private var nativeGLStatus = "EAGL + GLES2 SHADER AISLADO"
     @State private var librwGL3Status = "LIBRW GL3: NO EJECUTADO"
-    @State private var geometryStatus = "GEOMETRÍA: NO EJECUTADA"
+    @State private var geometryStatus = "TRIÁNGULO GLES2: EN PRUEBA"
     @State private var showLibrwTest = false
 
     var body: some View {
@@ -30,12 +30,12 @@ struct GPUTestView: View {
                     .foregroundStyle(.white.opacity(0.7))
 
                 if showLibrwTest {
-                    GLKClearTestView()
+                    GLESTriangleTestView()
                         .frame(maxWidth: .infinity)
                         .frame(height: 300)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.green.opacity(0.35), lineWidth: 1))
-                    Text("PRUEBA AISLADA · SIN LIBRW NI SHADERS")
+                    Text("PRUEBA GLES2 · SHADERS PROPIOS · SIN LIBRW")
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
                         .foregroundStyle(.white.opacity(0.55))
                 } else {
@@ -65,7 +65,7 @@ struct GPUTestView: View {
                 Button {
                     showLibrwTest.toggle()
                 } label: {
-                    Text(showLibrwTest ? "DETENER PRUEBA EAGL" : "PROBAR EAGL AISLADO")
+                    Text(showLibrwTest ? "DETENER PRUEBA GLES2" : "PROBAR SHADERS GLES2")
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
