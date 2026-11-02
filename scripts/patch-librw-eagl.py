@@ -88,7 +88,9 @@ edit("src/engine.cpp", [
 p = ROOT / "src/gl/shaders/simple_fs_gl.inc"
 shader_source = p.read_text()
 shader_start = shader_source.index("const char *simple_frag_src =")
-shader_end = shader_source.index(";", shader_start) + 1
+shader_end = shader_source.rfind('";') + 2
+if shader_end <= shader_start:
+    raise RuntimeError("Could not find end of simple fragment shader declaration")
 c_nl = chr(92) + "n"
 replacement = "\n".join([
     "const char *simple_frag_src =",
