@@ -116,7 +116,7 @@ int krosaGetGL3DrawMetric(int i) { switch(i){case 0:return krosaGL3IndexCount;ca
     ('void\ndefaultRenderCB(Atomic *atomic, InstanceDataHeader *header)\n{',
      'void\ndefaultRenderCB(Atomic *atomic, InstanceDataHeader *header)\n{\n\tkrosaGL3DrawFlags |= 128;'),
     ('\t\tdrawInst(header, inst);',
-     r"""\t\tkrosaGL3IndexCount = inst->numIndex;
+     """\t\tkrosaGL3IndexCount = inst->numIndex;
 \t\tkrosaGL3Primitive = header->primType;
 \t\tkrosaGL3VertexCount = header->totalNumVertex;
 \t\tkrosaGL3MeshCount = header->numMeshes;
