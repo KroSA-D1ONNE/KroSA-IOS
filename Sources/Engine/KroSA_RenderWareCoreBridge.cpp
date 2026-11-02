@@ -129,8 +129,35 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
         rw::gl3::defaultShader != nullptr && glGetString(GL_VERSION) != nullptr ? 1 : -5;
 
     int result = -5;
+    // Build a real librw GL texture with a high-contrast green checker pattern.
+    // The texture is uploaded through Raster::lock/unlock, not a host-side GL texture.
+    rw::Raster *textureRaster = rw::Raster::create(
+        8, 8, 32, rw::Raster::TEXTURE | rw::Raster::C8888);
+    rw::Texture *texture = textureRaster ? rw::Texture::create(textureRaster) : nullptr;
+    if (texture) {
+        texture->setFilter(rw::Texture::NEAREST);
+        texture->setAddressU(rw::Texture::CLAMP);
+        texture->setAddressV(rw::Texture::CLAMP);
+        uint8 *texels = textureRaster->lock(0, rw::Raster::LOCKWRITE | rw::Raster::LOCKNOFETCH);
+        if (texels) {
+            for (int y = 0; y < 8; ++y) {
+                for (int x = 0; x < 8; ++x) {
+                    const bool light = ((x / 2) + (y / 2)) % 2 == 0;
+                    const size_t offset = (size_t(y) * 8 + size_t(x)) * 4;
+                    texels[offset + 0] = light ? 35 : 5;
+                    texels[offset + 1] = light ? 245 : 105;
+                    texels[offset + 2] = light ? 65 : 20;
+                    texels[offset + 3] = 255;
+                }
+            }
+            textureRaster->unlock(0);
+        } else {
+            texture->destroy();
+            texture = nullptr;
+        }
+    }
     rw::Geometry *geometry = rw::Geometry::create(
-        3, 1, rw::Geometry::POSITIONS | rw::Geometry::PRELIT);
+        3, 1, rw::Geometry::POSITIONS | rw::Geometry::PRELIT | rw::Geometry::TEXTURED);
     rw::Material *material = nullptr;
     rw::Frame *frame = nullptr;
     rw::Atomic *atomic = nullptr;
@@ -138,8 +165,15 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
 
     if (geometry) {
         material = rw::Material::create();
-        if (material) material->color = {45, 235, 95, 255};
-        if (material && geometry->matList.appendMaterial(material) >= 0) {
+        if (material) {
+            material->color = {255, 255, 255, 255};
+            if (texture) {
+                material->setTexture(texture);
+                texture->destroy(); // Material now owns the remaining reference.
+                texture = nullptr;
+            }
+        }
+        if (material && material->texture && geometry->matList.appendMaterial(material) >= 0) {
 
             rw::MorphTarget *target = &geometry->morphTargets[0];
             target->vertices[0].set(-0.62f, -0.58f, 0.0f);
@@ -147,9 +181,13 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
             target->vertices[2].set( 0.00f,  0.66f, 0.0f);
             // Flat-color probe: identical color at all vertices eliminates
             // intentional smooth color interpolation from the diagnostic.
-            geometry->colors[0] = {45, 235, 95, 255};
-            geometry->colors[1] = {45, 235, 95, 255};
-            geometry->colors[2] = {45, 235, 95, 255};
+            // White vertex color lets the texture's green checker reach the fragment unchanged.
+            geometry->colors[0] = {255, 255, 255, 255};
+            geometry->colors[1] = {255, 255, 255, 255};
+            geometry->colors[2] = {255, 255, 255, 255};
+            geometry->texCoords[0][0] = {0.0f, 0.0f};
+            geometry->texCoords[0][1] = {1.0f, 0.0f};
+            geometry->texCoords[0][2] = {0.5f, 1.0f};
             geometry->triangles[0].v[0] = 0;
             geometry->triangles[0].v[1] = 1;
             geometry->triangles[0].v[2] = 2;
@@ -234,6 +272,11 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
     glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)hostFramebuffer);
     glViewport(hostViewport[0], hostViewport[1], hostViewport[2], hostViewport[3]);
 
+    if (texture) texture->destroy();
+    if (textureRaster && !texture) {
+        // Once wrapped in Texture, the raster is released by Texture::destroy.
+        // A standalone raster remains ours only if Texture::create failed.
+    }
     if (material) material->destroy();
     if (geometry) geometry->destroy();
     if (atomic) atomic->destroy();
