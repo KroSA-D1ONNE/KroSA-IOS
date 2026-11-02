@@ -84,28 +84,7 @@ edit("src/engine.cpp", [
 ])
 
 
-# TEMPORARY ISOLATION TEST: preserve librw's vertex shader and draw path.
-p = ROOT / "src/gl/shaders/simple_fs_gl.inc"
-shader_source = p.read_text()
-shader_start = shader_source.index("const char *simple_frag_src =")
-# Upstream terminates this adjacent-string C declaration with a standalone
-# semicolon on its own line (not a trailing `";`).
-# The upstream declaration closes after its final adjacent string,
-# followed by a blank line and a standalone semicolon.
-# The upstream file contains one C string declaration; use its final
-# semicolon as the declaration terminator (GLSL has earlier semicolons).
-shader_end = shader_source.rfind(";") + 1
-if shader_end <= shader_start:
-    raise RuntimeError("Could not find end of simple fragment shader declaration")
-c_nl = chr(92) + "n"
-replacement = "\n".join([
-    "const char *simple_frag_src =",
-    '"precision mediump float;' + c_nl + '"',
-    '"FSIN vec4 v_color;' + c_nl + '"',
-    '"void main(void) { FRAGCOLOR(vec4(v_color.rgb, 1.0)); }' + c_nl + '" ;'
-]) 
-shader_source = shader_source[:shader_start] + replacement + shader_source[shader_end:]
-p.write_text(shader_source)
+# Keep upstream simple fragment shader intact: texture sampling, fog and alpha test.
 
 print("Applied iOS EAGL host patch to pinned librw source")
 
