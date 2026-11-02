@@ -2,32 +2,31 @@ import SwiftUI
 import GLKit
 import OpenGLES
 
-/// Minimal OpenGL ES 2.0 renderer used to validate the native iOS GPU path.
-/// This is deliberately isolated from the launcher and the future GTA runtime.
+/// Native GLES2 texture test. Uses an EAGLContext, a real GL texture,
+/// UV coordinates and GLKBaseEffect's GLES shader pipeline.
 struct GPUTestView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
+        ZStack {
             Color(red: 0.035, green: 0.045, blue: 0.04).ignoresSafeArea()
-
             VStack(spacing: 18) {
-                Text("KroSA · GPU TEST")
+                Text("KroSA · TEXTURE TEST")
                     .font(.system(size: 15, weight: .bold, design: .monospaced))
                     .foregroundStyle(.white)
 
-                GLES2TriangleView()
+                GLES2TextureView()
                     .frame(maxWidth: .infinity)
                     .aspectRatio(1, contentMode: .fit)
                     .background(Color.black)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.green.opacity(0.35), lineWidth: 1))
 
-                Text("OpenGL ES 2.0 · EAGLContext")
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                Text("OpenGL ES 2.0 · EAGLContext · GL_TEXTURE_2D")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundStyle(.green)
 
-                Text("Triángulo de prueba renderizado directamente en la GPU. Esto valida el contexto gráfico nativo; todavía no carga assets de GTA.")
+                Text("Cuadrilátero texturizado con UV. La textura se genera en memoria y se sube a la GPU; no usa imágenes externas ni archivos de GTA.")
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
@@ -46,7 +45,7 @@ struct GPUTestView: View {
     }
 }
 
-private struct GLES2TriangleView: UIViewRepresentable {
+private struct GLES2TextureView: UIViewRepresentable {
     func makeCoordinator() -> Renderer { Renderer() }
 
     func makeUIView(context: Context) -> GLKView {
@@ -66,44 +65,92 @@ private struct GLES2TriangleView: UIViewRepresentable {
 
     final class Renderer: NSObject, GLKViewDelegate {
         let glContext: EAGLContext
+        private var textureID: GLuint = 0
+        private let effect = GLKBaseEffect()
 
         override init() {
             glContext = EAGLContext(api: .openGLES2)!
             super.init()
+            _ = EAGLContext.setCurrent(glContext)
+            createTestTexture()
+            effect.texture2d0.enabled = GLboolean(GL_TRUE)
+            effect.texture2d0.name = textureID
+            effect.texture2d0.target = GLenum(GL_TEXTURE_2D)
+            effect.texture2d0.envMode = GLKTextureEnvMode(GLKTextureEnvModeModulate)
+            effect.transform.projectionMatrix = GLKMatrix4MakeOrtho(-1, 1, -1, 1, -1, 1)
+            effect.transform.modelviewMatrix = GLKMatrix4Identity
+        }
+
+        private func createTestTexture() {
+            let width = 128
+            let height = 128
+            var pixels = [GLubyte](repeating: 255, count: width * height * 4)
+
+            for y in 0..<height {
+                for x in 0..<width {
+                    let cell = ((x / 16) + (y / 16)) % 2 == 0
+                    let offset = (y * width + x) * 4
+                    pixels[offset] = cell ? 45 : 18
+                    pixels[offset + 1] = cell ? 220 : 95
+                    pixels[offset + 2] = cell ? 90 : 35
+                    pixels[offset + 3] = 255
+                }
+            }
+
+            glGenTextures(1, &textureID)
+            glBindTexture(GLenum(GL_TEXTURE_2D), textureID)
+            glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_MIN_FILTER), GL_LINEAR)
+            glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_MAG_FILTER), GL_LINEAR)
+            glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_WRAP_S), GL_CLAMP_TO_EDGE)
+            glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_WRAP_T), GL_CLAMP_TO_EDGE)
+
+            pixels.withUnsafeBytes { bytes in
+                glTexImage2D(
+                    GLenum(GL_TEXTURE_2D), 0, GL_RGBA,
+                    GLsizei(width), GLsizei(height), 0,
+                    GLenum(GL_RGBA), GLenum(GL_UNSIGNED_BYTE),
+                    bytes.baseAddress
+                )
+            }
+            glBindTexture(GLenum(GL_TEXTURE_2D), 0)
         }
 
         func glkView(_ view: GLKView, drawIn rect: CGRect) {
             guard EAGLContext.setCurrent(glContext) else { return }
 
+            glViewport(0, 0, GLsizei(view.drawableWidth), GLsizei(view.drawableHeight))
             glClearColor(0.025, 0.04, 0.03, 1.0)
             glClear(GLbitfield(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT))
 
-            let effect = GLKBaseEffect()
-            effect.useConstantColor = GLboolean(GL_TRUE)
-            effect.constantColor = GLKVector4Make(0.30, 0.95, 0.45, 1.0)
-            effect.transform.projectionMatrix = GLKMatrix4MakeOrtho(-1, 1, -1, 1, -1, 1)
-            effect.transform.modelviewMatrix = GLKMatrix4Identity
-            effect.prepareToDraw()
-
+            // Interleaved position (XYZ) + texture coordinates (UV).
             let vertices: [GLfloat] = [
-                 0.0,  0.72, 0.0,
-                -0.68, -0.55, 0.0,
-                 0.68, -0.55, 0.0
+                -0.78, -0.68, 0,  0, 0,
+                 0.78, -0.68, 0,  1, 0,
+                -0.78,  0.68, 0,  0, 1,
+                 0.78,  0.68, 0,  1, 1
             ]
 
+            effect.prepareToDraw()
             vertices.withUnsafeBufferPointer { buffer in
-                guard let baseAddress = buffer.baseAddress else { return }
-                glEnableVertexAttribArray(GLuint(GLKVertexAttrib.position.rawValue))
-                glVertexAttribPointer(
-                    GLuint(GLKVertexAttrib.position.rawValue),
-                    3,
-                    GLenum(GL_FLOAT),
-                    GLboolean(GL_FALSE),
-                    0,
-                    UnsafeRawPointer(baseAddress)
-                )
-                glDrawArrays(GLenum(GL_TRIANGLES), 0, 3)
-                glDisableVertexAttribArray(GLuint(GLKVertexAttrib.position.rawValue))
+                guard let base = buffer.baseAddress else { return }
+                let stride = GLsizei(5 * MemoryLayout<GLfloat>.size)
+                let position = GLuint(GLKVertexAttrib.position.rawValue)
+                let texCoord = GLuint(GLKVertexAttrib.texCoord0.rawValue)
+
+                glEnableVertexAttribArray(position)
+                glEnableVertexAttribArray(texCoord)
+                glVertexAttribPointer(position, 3, GLenum(GL_FLOAT), GLboolean(GL_FALSE), stride, UnsafeRawPointer(base))
+                glVertexAttribPointer(texCoord, 2, GLenum(GL_FLOAT), GLboolean(GL_FALSE), stride, UnsafeRawPointer(base.advanced(by: 3)))
+                glDrawArrays(GLenum(GL_TRIANGLE_STRIP), 0, 4)
+                glDisableVertexAttribArray(position)
+                glDisableVertexAttribArray(texCoord)
+            }
+        }
+
+        deinit {
+            if textureID != 0 {
+                _ = EAGLContext.setCurrent(glContext)
+                glDeleteTextures(1, &textureID)
             }
         }
     }
