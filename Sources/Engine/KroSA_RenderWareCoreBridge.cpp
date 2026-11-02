@@ -134,6 +134,10 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
     rw::Raster *textureRaster = rw::Raster::create(
         8, 8, 32, rw::Raster::TEXTURE | rw::Raster::C8888);
     rw::Texture *texture = textureRaster ? rw::Texture::create(textureRaster) : nullptr;
+    if (textureRaster && !texture) {
+        textureRaster->destroy();
+        textureRaster = nullptr;
+    }
     if (texture) {
         texture->setFilter(rw::Texture::NEAREST);
         texture->setAddressU(rw::Texture::CLAMP);
@@ -273,10 +277,6 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
     glViewport(hostViewport[0], hostViewport[1], hostViewport[2], hostViewport[3]);
 
     if (texture) texture->destroy();
-    if (textureRaster && !texture) {
-        // Once wrapped in Texture, the raster is released by Texture::destroy.
-        // A standalone raster remains ours only if Texture::create failed.
-    }
     if (material) material->destroy();
     if (geometry) geometry->destroy();
     if (atomic) atomic->destroy();
