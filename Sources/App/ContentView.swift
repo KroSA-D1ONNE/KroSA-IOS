@@ -5,6 +5,7 @@ struct ContentView: View {
     @State private var serverAddress = ""
     @State private var serverPort = "7777"
     @State private var dataReport = GameDataBootstrap.inspect()
+    @State private var showingGPUTest = false
 
     private var canContinue: Bool {
         !nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
@@ -68,6 +69,19 @@ struct ContentView: View {
                 }
                 .disabled(true)
 
+                Button {
+                    showingGPUTest = true
+                } label: {
+                    Text("PROBAR GPU")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color(red: 0.35, green: 0.95, blue: 0.48))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                        .background(Color.white.opacity(0.045))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .padding(.top, 8)
+
                 Text(dataReport.isReady ? "GAME ENGINE NOT INTEGRATED" : "COPIÁ LOS ARCHIVOS DE GTA SA EN DOCUMENTS/KROSA")
                     .font(.system(size: 9, weight: .medium, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.35))
@@ -84,6 +98,7 @@ struct ContentView: View {
             .frame(maxWidth: 460)
         }
         .onAppear(perform: refreshDataStatus)
+        .sheet(isPresented: $showingGPUTest) { GPUTestView() }
     }
 
     private func refreshDataStatus() {
