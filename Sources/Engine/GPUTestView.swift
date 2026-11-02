@@ -47,7 +47,7 @@ struct GPUTestView: View {
                         let vx = krosaGetLastGeometryViewport(2)
                         let vy = krosaGetLastGeometryViewport(3)
                         let readOK = (flags & 256) != 0
-                        geometryStatus = "RGB:\(red),\(green),\(blue) CB:\(reached ? "Y" : "N") SH:\(shader ? "Y" : "N") VBO:\(vbo ? "Y" : "N") IBO:\(ibo ? "Y" : "N") POS:\(position ? "Y" : "N") AB:\(attribBuffer ? "Y" : "N") DRAW:\(drawOK ? "OK" : "ERR") INCB:\(drawR),\(drawG),\(drawB) FBO:\(fbo) VP:\(vx)x\(vy) READ:\(readOK ? "OK" : "ERR")
+                        geometryStatus = "RGB:\(red),\(green),\(blue) CB:\(reached ? "Y" : "N") SH:\(shader ? "Y" : "N") VBO:\(vbo ? "Y" : "N") IBO:\(ibo ? "Y" : "N") POS:\(position ? "Y" : "N") AB:\(attribBuffer ? "Y" : "N") DRAW:\(drawOK ? "OK" : "ERR") INCB:\(drawR),\(drawG),\(drawB) FBO:\(fbo) VP:\(vx)x\(vy) READ:\(readOK ? "OK" : "ERR")"
                     } else {
                         geometryStatus = "LIBRW GEOMETRY: ERROR · \(result)"
                     }
