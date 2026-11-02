@@ -95,19 +95,20 @@ edit("src/gl/gl3device.cpp", [
      "\tuniformStateDirty[RWGL_FOGCOLOR] = true;")
 ])
 
-# Isolate the interpolated fog factor. Keep the original vertex shader and
-# visualize v_fog directly, bypassing texture/color/alpha-test interactions.
+# Isolate the interpolated vertex color. The fog-factor probe showed v_fog=1,
+# so fog is disabled as expected; now bypass texture/fog/alpha-test and inspect
+# the color produced by librw's original vertex shader.
 shader_path = ROOT / "src/gl/shaders/simple_fs_gl.inc"
 shader = shader_path.read_text()
 begin = shader.find("const char *simple_frag_src =")
 if begin < 0:
     raise SystemExit("simple_fs_gl.inc: fragment shader declaration not found")
-finish = shader.find("\n;", begin)
+finish = shader.find("\\n;", begin)
 if finish < 0:
     raise SystemExit("simple_fs_gl.inc: fragment shader terminator not found")
 shader = shader[:begin] + '''const char *simple_frag_src =
-"FSIN float v_fog;\\n"
-"void main(void) { float f = clamp(v_fog, 0.0, 1.0); FRAGCOLOR(vec4(f, f, f, 1.0)); }\\n"
+"FSIN vec4 v_color;\\n"
+"void main(void) { FRAGCOLOR(v_color); }\\n"
 ;''' + shader[finish + 2:]
 shader_path.write_text(shader)
 
