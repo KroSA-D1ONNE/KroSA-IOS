@@ -12,6 +12,8 @@ settings:
     IPHONEOS_DEPLOYMENT_TARGET: "15.1"
     TARGETED_DEVICE_FAMILY: "1,2"
     GENERATE_INFOPLIST_FILE: YES
+    INFOPLIST_KEY_CFBundleVersion: "1"
+    INFOPLIST_KEY_CFBundleShortVersionString: "1.0"
     INFOPLIST_KEY_CFBundleDisplayName: KroSA
     INFOPLIST_KEY_UILaunchScreen_Generation: YES
     INFOPLIST_KEY_UIFileSharingEnabled: YES
