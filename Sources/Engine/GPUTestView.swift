@@ -129,13 +129,16 @@ private struct GLES2TextureView: UIViewRepresentable {
         // pointer) before the renderer can run. Keep simulator CI UI-only; the real
         // EAGL/librw path below is compiled and used on physical iOS devices.
         let label = UILabel()
-        label.text = "GPU REAL OMITIDA EN SIMULADOR CI\\nLa prueba EAGL / librw debe ejecutarse en un iPhone físico."
+        label.text = "GPU REAL OMITIDA EN SIMULADOR CI\nLa prueba EAGL / librw debe ejecutarse en un iPhone físico."
         label.textColor = .systemOrange
         label.textAlignment = .center
         label.numberOfLines = 0
-        onContextValidated(false)
-        onGL3Initialized(-91)
-        onGeometryDrawn(-91)
+        // Defer SwiftUI state updates until makeUIView has returned.
+        DispatchQueue.main.async {
+            onContextValidated(false)
+            onGL3Initialized(-91)
+            onGeometryDrawn(-91)
+        }
         return label
         #else
         guard let glContext = context.coordinator.glContext else {
