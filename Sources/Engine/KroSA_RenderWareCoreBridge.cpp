@@ -139,7 +139,6 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
                 rw::SetRenderState(rw::CULLMODE, rw::CULLNONE);
                 rw::SetRenderState(rw::FOGENABLE, 0);
                 rw::SetRenderState(rw::VERTEXALPHA, 0);
-                rw::SetRenderState(rw::ALPHATEST, 0);
                 atomic->render();
                 glFinish();
                 GLubyte centerPixel[4] = {0, 0, 0, 0};
