@@ -317,5 +317,25 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
     rw::Engine::stop();
     rw::Engine::close();
     rw::Engine::term();
+
+    // Engine::term() may touch the GL binding while shutting down librw.
+    // GLKView still owns the drawable and expects its framebuffer/viewport
+    // to be current when its delegate returns and it presents the frame.
+    typedef void (*HostBindFramebufferProc)(GLenum, GLuint);
+    typedef void (*HostViewportProc)(GLint, GLint, GLsizei, GLsizei);
+    HostBindFramebufferProc hostBindFramebuffer =
+        reinterpret_cast<HostBindFramebufferProc>(dlsym(RTLD_DEFAULT, "glBindFramebuffer"));
+    HostViewportProc hostViewportProc =
+        reinterpret_cast<HostViewportProc>(dlsym(RTLD_DEFAULT, "glViewport"));
+    if (hostBindFramebuffer)
+        hostBindFramebuffer(GL_FRAMEBUFFER, (GLuint)hostFramebuffer);
+    if (hostViewportProc)
+        hostViewportProc(hostViewport[0], hostViewport[1], hostViewport[2], hostViewport[3]);
+    typedef void (*HostFlushProc)(void);
+    HostFlushProc hostFlush =
+        reinterpret_cast<HostFlushProc>(dlsym(RTLD_DEFAULT, "glFlush"));
+    if (hostFlush)
+        hostFlush();
+
     return result;
 }
