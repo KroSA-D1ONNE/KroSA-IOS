@@ -16,9 +16,7 @@ def edit(path, replacements):
 
 edit("CMakeLists.txt", [
     ('set(LIBRW_GL3_GFXLIBS "GLFW" "SDL2" "SDL3")',
-     'set(LIBRW_GL3_GFXLIBS "GLFW" "SDL2" "SDL3" "EAGL")'),
-    ('    set(OpenGL_GL_PREFERENCE GLVND)\n    find_package(OpenGL)\n    if(TARGET OpenGL::OpenGL)\n        target_link_libraries(librw\n            PRIVATE\n                OpenGL::OpenGL\n        )\n    elseif(TARGET OpenGL::EGL)\n        target_link_libraries(librw\n            PRIVATE\n                OpenGL::EGL\n        )\n    elseif(TARGET OpenGL::GL)\n        target_link_libraries(librw\n            PRIVATE\n                OpenGL::GL\n        )\n    else()\n        message(FATAL_ERROR "find_package(OpenGL) failed.")\n    endif()',
-     '    if(NOT LIBRW_GL3_GFXLIB STREQUAL "EAGL")\n        set(OpenGL_GL_PREFERENCE GLVND)\n        find_package(OpenGL)\n        if(TARGET OpenGL::OpenGL)\n            target_link_libraries(librw PRIVATE OpenGL::OpenGL)\n        elseif(TARGET OpenGL::EGL)\n            target_link_libraries(librw PRIVATE OpenGL::EGL)\n        elseif(TARGET OpenGL::GL)\n            target_link_libraries(librw PRIVATE OpenGL::GL)\n        else()\n            message(FATAL_ERROR "find_package(OpenGL) failed.")\n        endif()\n    endif()')
+     'set(LIBRW_GL3_GFXLIBS "GLFW" "SDL2" "SDL3" "EAGL")')
 ])
 
 edit("src/CMakeLists.txt", [
