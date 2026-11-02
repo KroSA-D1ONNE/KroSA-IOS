@@ -12,6 +12,7 @@ struct GPUTestView: View {
     @State private var geometryStatus = "GEOMETRÍA LIBRW SIN PROBAR"
     @State private var showGLKViewTest = false
     @State private var showTriangleTest = false
+    @State private var showLibrwTest = false
 
     var body: some View {
         ZStack {
@@ -110,6 +111,43 @@ struct GPUTestView: View {
                         .frame(height: 190)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     Text("Triángulo amarillo = compilación de shaders, enlace del programa y glDrawArrays GLES2.")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundStyle(.green)
+                        .multilineTextAlignment(.center)
+                }
+
+                Button("INICIAR LIBRW GL3 + GEOMETRÍA") {
+                    showLibrwTest.toggle()
+                }
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundStyle(.black)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 12)
+                .background(Color.green)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                if showLibrwTest {
+                    GLES2TextureView(
+                        onContextValidated: { valid in
+                            nativeGLStatus = valid
+                                ? "EAGL CONTEXT: OK · LIBRW PUEDE USAR EL CONTEXTO"
+                                : "EAGL CONTEXT: ERROR · LIBRW"
+                        },
+                        onGL3Initialized: { result in
+                            librwGL3Status = result == 1
+                                ? "LIBRW GL3 / EAGL: OK · ENGINE + SHADERS"
+                                : "LIBRW GL3 / EAGL: ERROR · ETAPA \(result)"
+                        },
+                        onGeometryDrawn: { result in
+                            geometryStatus = result == 1
+                                ? "GEOMETRÍA LIBRW: OK · TRIÁNGULO DIBUJADO"
+                                : "GEOMETRÍA LIBRW: ERROR · CÓDIGO \(result)"
+                        }
+                    )
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 220)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    Text("El fondo cuadriculado es GLKit; el triángulo verde debe dibujarlo el pipeline GL3 de librw.")
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundStyle(.green)
                         .multilineTextAlignment(.center)
