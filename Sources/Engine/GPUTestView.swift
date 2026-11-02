@@ -10,6 +10,7 @@ struct GPUTestView: View {
     @State private var nativeGLStatus = "PUENTE C++ SIN PROBAR"
     @State private var librwGL3Status = "LIBRW GL3 / EAGL SIN PROBAR"
     @State private var geometryStatus = "GEOMETRÍA LIBRW SIN PROBAR"
+    @State private var isRunningGPU = false
 
     var body: some View {
         ZStack {
@@ -19,6 +20,7 @@ struct GPUTestView: View {
                     .font(.system(size: 15, weight: .bold, design: .monospaced))
                     .foregroundStyle(.white)
 
+                if isRunningGPU {
                 GLES2TextureView(onContextValidated: { valid in
                     nativeGLStatus = valid ? "EAGL → C++: OK · GL CONTEXT ACTIVO" : "EAGL → C++: ERROR · SIN CONTEXTO"
                 }, onGL3Initialized: { result in
@@ -57,6 +59,33 @@ struct GPUTestView: View {
                     .background(Color.black)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.green.opacity(0.35), lineWidth: 1))
+                } else {
+                    VStack(spacing: 14) {
+                        Image(systemName: "gpu")
+                            .font(.system(size: 42, weight: .light))
+                            .foregroundStyle(.green)
+                        Text("PRUEBA EAGL PREPARADA")
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.white)
+                        Text("El motor gráfico se iniciará únicamente cuando pulses el botón. Así la pantalla de diagnóstico no crea un contexto GL al abrirse.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.white.opacity(0.6))
+                            .multilineTextAlignment(.center)
+                        Button("INICIAR PRUEBA EAGL") { isRunningGPU = true }
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 12)
+                            .background(Color.green)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .aspectRatio(1, contentMode: .fit)
+                    .padding(18)
+                    .background(Color.black)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.green.opacity(0.35), lineWidth: 1))
+                }
 
                 Text("OpenGL ES 2.0 · EAGLContext · GL_TEXTURE_2D")
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
