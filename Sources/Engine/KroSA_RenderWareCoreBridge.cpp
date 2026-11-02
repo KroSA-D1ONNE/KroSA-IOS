@@ -85,8 +85,15 @@ extern "C" int krosaLibrwGL3InitSmokeTest(int width, int height) {
 
 extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angleY, float angleX, float cameraDistance) {
     krosaLastGeometryInitStatus = -1;
-    if (width <= 0 || height <= 0 ||
-        rw::Engine::state != rw::Engine::Dead || rw::engine != nullptr)
+    if (width <= 0 || height <= 0)
+        return -1;
+
+    // Keep librw's device and GL3 shaders alive across frames. Reinitializing
+    // and terminating the engine inside every GLKView draw callback invalidates
+    // the host drawable and can leave the view black after its first presentation.
+    const bool needsEngineStart = rw::Engine::state == rw::Engine::Dead;
+    if (!needsEngineStart &&
+        (rw::Engine::state != rw::Engine::Started || rw::engine == nullptr))
         return -1;
 
     // GLAD is initialized by Engine::start(), so do not call its function
@@ -105,25 +112,27 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
     if (hostFramebuffer == 0)
         return -7;
 
-    if (!rw::Engine::init()) {
-        krosaLastGeometryInitStatus = -2;
-        return -2;
-    }
+    if (needsEngineStart) {
+        if (!rw::Engine::init()) {
+            krosaLastGeometryInitStatus = -2;
+            return -2;
+        }
 
-    rw::EngineOpenParams params;
-    params.width = width;
-    params.height = height;
-    params.windowtitle = "KroSA Geometry Test";
-    if (!rw::Engine::open(&params)) {
-        krosaLastGeometryInitStatus = -3;
-        rw::Engine::term();
-        return -3;
-    }
-    if (!rw::Engine::start()) {
-        krosaLastGeometryInitStatus = -4;
-        rw::Engine::close();
-        rw::Engine::term();
-        return -4;
+        rw::EngineOpenParams params;
+        params.width = width;
+        params.height = height;
+        params.windowtitle = "KroSA Geometry Test";
+        if (!rw::Engine::open(&params)) {
+            krosaLastGeometryInitStatus = -3;
+            rw::Engine::term();
+            return -3;
+        }
+        if (!rw::Engine::start()) {
+            krosaLastGeometryInitStatus = -4;
+            rw::Engine::close();
+            rw::Engine::term();
+            return -4;
+        }
     }
     krosaLastGeometryInitStatus =
         rw::Engine::state == rw::Engine::Started &&
@@ -314,28 +323,11 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
     if (frame) frame->destroy();
     if (pipeline) pipeline->destroy();
 
-    rw::Engine::stop();
-    rw::Engine::close();
-    rw::Engine::term();
-
-    // Engine::term() may touch the GL binding while shutting down librw.
-    // GLKView still owns the drawable and expects its framebuffer/viewport
-    // to be current when its delegate returns and it presents the frame.
-    typedef void (*HostBindFramebufferProc)(GLenum, GLuint);
-    typedef void (*HostViewportProc)(GLint, GLint, GLsizei, GLsizei);
-    HostBindFramebufferProc hostBindFramebuffer =
-        reinterpret_cast<HostBindFramebufferProc>(dlsym(RTLD_DEFAULT, "glBindFramebuffer"));
-    HostViewportProc hostViewportProc =
-        reinterpret_cast<HostViewportProc>(dlsym(RTLD_DEFAULT, "glViewport"));
-    if (hostBindFramebuffer)
-        hostBindFramebuffer(GL_FRAMEBUFFER, (GLuint)hostFramebuffer);
-    if (hostViewportProc)
-        hostViewportProc(hostViewport[0], hostViewport[1], hostViewport[2], hostViewport[3]);
-    typedef void (*HostFlushProc)(void);
-    HostFlushProc hostFlush =
-        reinterpret_cast<HostFlushProc>(dlsym(RTLD_DEFAULT, "glFlush"));
-    if (hostFlush)
-        hostFlush();
+    // The GLKView owns presentation. Keep the EAGL context, librw device,
+    // and default shaders alive; only the per-frame test geometry is released.
+    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)hostFramebuffer);
+    glViewport(hostViewport[0], hostViewport[1], hostViewport[2], hostViewport[3]);
+    glFlush();
 
     return result;
 }
