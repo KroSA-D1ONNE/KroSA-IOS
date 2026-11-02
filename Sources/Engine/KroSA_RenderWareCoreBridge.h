@@ -9,6 +9,9 @@ extern "C" {
 /// Returns 1 when the core reaches Initialized and returns to Dead; 0 on failure.
 int krosaRenderWareCoreSmokeTest(void);
 
+/// Returns 1 when the current app-owned OpenGL ES context is callable from C++.
+int krosaOpenGLESContextSmokeTest(void);
+
 #ifdef __cplusplus
 }
 #endif
