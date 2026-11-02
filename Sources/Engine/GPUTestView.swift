@@ -119,11 +119,22 @@ private struct GLES2TextureView: UIViewRepresentable {
 
     func makeCoordinator() -> Renderer { Renderer() }
 
-    func makeUIView(context: Context) -> GLKView {
+    func makeUIView(context: Context) -> UIView {
         context.coordinator.onContextValidated = onContextValidated
         context.coordinator.onGL3Initialized = onGL3Initialized
         context.coordinator.onGeometryDrawn = onGeometryDrawn
-        let view = GLKView(frame: .zero, context: context.coordinator.glContext)
+        guard let glContext = context.coordinator.glContext else {
+            let label = UILabel()
+            label.text = "NO SE PUDO CREAR EAGLContext (OpenGL ES 2.0)"
+            label.textColor = .systemOrange
+            label.textAlignment = .center
+            label.numberOfLines = 0
+            onContextValidated(false)
+            onGL3Initialized(-90)
+            onGeometryDrawn(-90)
+            return label
+        }
+        let view = GLKView(frame: .zero, context: glContext)
         view.delegate = context.coordinator
         view.drawableColorFormat = .RGBA8888
         view.drawableDepthFormat = .format16
@@ -133,12 +144,12 @@ private struct GLES2TextureView: UIViewRepresentable {
         return view
     }
 
-    func updateUIView(_ uiView: GLKView, context: Context) {
-        uiView.setNeedsDisplay()
+    func updateUIView(_ uiView: UIView, context: Context) {
+        (uiView as? GLKView)?.setNeedsDisplay()
     }
 
     final class Renderer: NSObject, GLKViewDelegate {
-        let glContext: EAGLContext
+        let glContext: EAGLContext?
         private var textureID: GLuint = 0
         private let effect = GLKBaseEffect()
         var onContextValidated: ((Bool) -> Void)?
@@ -148,9 +159,9 @@ private struct GLES2TextureView: UIViewRepresentable {
         private var didRunGeometryTest = false
 
         override init() {
-            glContext = EAGLContext(api: .openGLES2)!
+            glContext = EAGLContext(api: .openGLES2)
             super.init()
-            _ = EAGLContext.setCurrent(glContext)
+            guard let glContext, EAGLContext.setCurrent(glContext) else { return }
             createTestTexture()
             effect.texture2d0.enabled = GLboolean(GL_TRUE)
             effect.texture2d0.name = textureID
@@ -194,7 +205,7 @@ private struct GLES2TextureView: UIViewRepresentable {
         }
 
         func glkView(_ view: GLKView, drawIn rect: CGRect) {
-            guard EAGLContext.setCurrent(glContext) else { return }
+            guard let glContext, EAGLContext.setCurrent(glContext) else { return }
             if !didValidateNativeContext {
                 didValidateNativeContext = true
                 onContextValidated?(krosaOpenGLESContextSmokeTest() == 1)
@@ -240,8 +251,10 @@ private struct GLES2TextureView: UIViewRepresentable {
 
         deinit {
             if textureID != 0 {
-                _ = EAGLContext.setCurrent(glContext)
-                glDeleteTextures(1, &textureID)
+                if let glContext {
+                    _ = EAGLContext.setCurrent(glContext)
+                    glDeleteTextures(1, &textureID)
+                }
             }
         }
     }
