@@ -7,6 +7,7 @@ import OpenGLES
 struct GPUTestView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var renderWareStatus = "CORE SIN PROBAR"
+    @State private var nativeGLStatus = "PUENTE C++ SIN PROBAR"
 
     var body: some View {
         ZStack {
@@ -16,7 +17,9 @@ struct GPUTestView: View {
                     .font(.system(size: 15, weight: .bold, design: .monospaced))
                     .foregroundStyle(.white)
 
-                GLES2TextureView()
+                GLES2TextureView(onContextValidated: { valid in
+                    nativeGLStatus = valid ? "EAGL → C++: OK · GL CONTEXT ACTIVO" : "EAGL → C++: ERROR · SIN CONTEXTO"
+                })
                     .frame(maxWidth: .infinity)
                     .aspectRatio(1, contentMode: .fit)
                     .background(Color.black)
@@ -31,6 +34,10 @@ struct GPUTestView: View {
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
+
+                Text(nativeGLStatus)
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(nativeGLStatus.contains("OK") ? .green : .orange)
 
                 Button {
                     let result = krosaRenderWareCoreSmokeTest()
@@ -66,9 +73,12 @@ struct GPUTestView: View {
 }
 
 private struct GLES2TextureView: UIViewRepresentable {
+    let onContextValidated: (Bool) -> Void
+
     func makeCoordinator() -> Renderer { Renderer() }
 
     func makeUIView(context: Context) -> GLKView {
+        context.coordinator.onContextValidated = onContextValidated
         let view = GLKView(frame: .zero, context: context.coordinator.glContext)
         view.delegate = context.coordinator
         view.drawableColorFormat = .RGBA8888
@@ -87,6 +97,8 @@ private struct GLES2TextureView: UIViewRepresentable {
         let glContext: EAGLContext
         private var textureID: GLuint = 0
         private let effect = GLKBaseEffect()
+        var onContextValidated: ((Bool) -> Void)?
+        private var didValidateNativeContext = false
 
         override init() {
             glContext = EAGLContext(api: .openGLES2)!
@@ -136,6 +148,10 @@ private struct GLES2TextureView: UIViewRepresentable {
 
         func glkView(_ view: GLKView, drawIn rect: CGRect) {
             guard EAGLContext.setCurrent(glContext) else { return }
+            if !didValidateNativeContext {
+                didValidateNativeContext = true
+                onContextValidated?(krosaOpenGLESContextSmokeTest() == 1)
+            }
 
             glViewport(0, 0, GLsizei(view.drawableWidth), GLsizei(view.drawableHeight))
             glClearColor(0.025, 0.04, 0.03, 1.0)
