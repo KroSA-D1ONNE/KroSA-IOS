@@ -16,6 +16,7 @@ settings:
     INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: YES
     CODE_SIGN_STYLE: Automatic
     CLANG_CXX_LANGUAGE_STANDARD: "c++11"
+    GCC_PREPROCESSOR_DEFINITIONS: "$(inherited) RW_GL3 LIBRW_EAGL"
     HEADER_SEARCH_PATHS: "$(inherited) $(SRCROOT)/vendor/librw"
     OTHER_LDFLAGS: "$(inherited) $(SRCROOT)/build/librw-ios/lib/librw.a -framework OpenGLES"
 targets:
