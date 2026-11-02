@@ -31,3 +31,15 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
         SWIFT_EMIT_LOC_STRINGS: YES
         SWIFT_OBJC_BRIDGING_HEADER: Sources/Engine/KroSABridgingHeader.h
+
+  KroSAUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/KroSAUITests
+    dependencies:
+      - target: KroSA
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.krosa.ios.uitests
+        GENERATE_INFOPLIST_FILE: YES
