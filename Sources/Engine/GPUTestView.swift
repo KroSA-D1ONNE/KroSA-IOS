@@ -265,6 +265,11 @@ private struct GLES2TextureView: UIViewRepresentable {
         view.drawableDepthFormat = .format16
         view.isOpaque = true
         view.enableSetNeedsDisplay = true
+        let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Renderer.handlePan(_:)))
+        let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Renderer.handlePinch(_:)))
+        view.addGestureRecognizer(pan)
+        view.addGestureRecognizer(pinch)
+        context.coordinator.hostView = view
         view.setNeedsDisplay()
         return view
         #endif
@@ -283,6 +288,12 @@ private struct GLES2TextureView: UIViewRepresentable {
         var onGeometryDrawn: ((Int32) -> Void)?
         private var didValidateNativeContext = false
         private var didRunGeometryTest = false
+        weak var hostView: GLKView?
+        private var cameraYaw: Float = 0.62
+        private var cameraPitch: Float = 0.38
+        private var cameraDistance: Float = 3.2
+        private var lastPanPoint = CGPoint.zero
+        private var pinchStartDistance: Float = 3.2
 
         override init() {
             glContext = EAGLContext(api: .openGLES2)
@@ -330,6 +341,23 @@ private struct GLES2TextureView: UIViewRepresentable {
             glBindTexture(GLenum(GL_TEXTURE_2D), 0)
         }
 
+        @objc func handlePan(_ gesture: UIPanGestureRecognizer) {
+            let point = gesture.translation(in: gesture.view)
+            if gesture.state == .began { lastPanPoint = point; return }
+            let dx = Float(point.x - lastPanPoint.x)
+            let dy = Float(point.y - lastPanPoint.y)
+            lastPanPoint = point
+            cameraYaw += dx * 0.008
+            cameraPitch = min(1.35, max(-1.35, cameraPitch + dy * 0.008))
+            hostView?.setNeedsDisplay()
+        }
+
+        @objc func handlePinch(_ gesture: UIPinchGestureRecognizer) {
+            if gesture.state == .began { pinchStartDistance = cameraDistance }
+            cameraDistance = min(7.0, max(1.8, pinchStartDistance / Float(gesture.scale)))
+            hostView?.setNeedsDisplay()
+        }
+
         func glkView(_ view: GLKView, drawIn rect: CGRect) {
             guard let glContext, EAGLContext.setCurrent(glContext) else { return }
             if !didValidateNativeContext {
@@ -368,14 +396,17 @@ private struct GLES2TextureView: UIViewRepresentable {
                 glDisableVertexAttribArray(texCoord)
             }
 
+            // Re-render the librw scene with the current touch-controlled camera.
+            // This prototype restarts the smoke-test lifecycle per frame; the next
+            // optimization is keeping the RenderWare device alive between frames.
+            let result = krosaLibrwGL3GeometrySmokeTest(
+                drawableWidth, drawableHeight, cameraYaw, cameraPitch, cameraDistance
+            )
             if !didRunGeometryTest {
                 didRunGeometryTest = true
-                let result = krosaLibrwGL3GeometrySmokeTest(
-                    drawableWidth, drawableHeight
-                )
                 onGL3Initialized?(krosaGetLastGeometryInitStatus())
-                onGeometryDrawn?(result)
             }
+            onGeometryDrawn?(result)
         }
 
         deinit {
