@@ -299,9 +299,9 @@ private struct GLES2TextureView: UIViewRepresentable {
                 for x in 0..<width {
                     let cell = ((x / 16) + (y / 16)) % 2 == 0
                     let offset = (y * width + x) * 4
-                    pixels[offset] = cell ? 45 : 18
-                    pixels[offset + 1] = cell ? 220 : 95
-                    pixels[offset + 2] = cell ? 90 : 35
+                    pixels[offset] = cell ? 30 : 15
+                    pixels[offset + 1] = cell ? 60 : 25
+                    pixels[offset + 2] = cell ? 220 : 90
                     pixels[offset + 3] = 255
                 }
             }
