@@ -83,7 +83,7 @@ extern "C" int krosaLibrwGL3InitSmokeTest(int width, int height) {
     return ready ? 1 : -5;
 }
 
-extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
+extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angleY, float angleX, float cameraDistance) {
     krosaLastGeometryInitStatus = -1;
     if (width <= 0 || height <= 0 ||
         rw::Engine::state != rw::Engine::Dead || rw::engine != nullptr)
@@ -235,8 +235,6 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
                     0, 0, (farPlane + nearPlane) / (nearPlane - farPlane), -1,
                     0, 0, (2.0f * farPlane * nearPlane) / (nearPlane - farPlane), 0
                 };
-                const float angleY = 0.62f;
-                const float angleX = 0.38f;
                 const float cy = cosf(angleY), sy = sinf(angleY);
                 const float cx = cosf(angleX), sx = sinf(angleX);
                 // Column-major view matrix: rotate the cube and place it 3 units ahead.
@@ -244,7 +242,7 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
                     cy, sx * sy, -cx * sy, 0,
                     0,  cx,       sx,       0,
                     sy, -sx * cy, cx * cy,  0,
-                    0,  0,       -3.2f,    1
+                    0,  0,       -cameraDistance, 1
                 };
                 rw::gl3::setProjectionMatrix(const_cast<float*>(projection));
                 rw::gl3::setViewMatrix(const_cast<float*>(view));
