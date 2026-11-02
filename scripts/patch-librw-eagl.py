@@ -101,7 +101,7 @@ shader = shader_path.read_text()
 begin = shader.find("const char *simple_frag_src =")
 if begin < 0:
     raise SystemExit("simple_fs_gl.inc: fragment shader declaration not found")
-finish = shader.find("\\n;", begin)
+finish = shader.find("\n;", begin)
 if finish < 0:
     raise SystemExit("simple_fs_gl.inc: fragment shader terminator not found")
 shader = shader[:begin] + '''const char *simple_frag_src =
