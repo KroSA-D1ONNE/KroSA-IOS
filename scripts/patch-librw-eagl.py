@@ -104,13 +104,13 @@ static int krosaGL3Pixel[3] = {0,0,0};
 static int krosaGL3Framebuffer = 0;
 static int krosaGL3Viewport[4] = {0,0,0,0};
 static int krosaGL3IndexCount=-1, krosaGL3Primitive=-1, krosaGL3VertexCount=-1, krosaGL3MeshCount=-1, krosaGL3AttribCount=-1;
-static int krosaGL3ColoredPixels=-1, krosaGL3MinX=-1, krosaGL3MinY=-1, krosaGL3MaxX=-1, krosaGL3MaxY=-1, krosaGL3BluePixels=-1, krosaGL3NonBlackPixels=-1, krosaGL3MaxGreen=-1;
-void krosaResetGL3DrawDiagnostics(void) { krosaGL3DrawFlags = 0; krosaGL3Pixel[0]=krosaGL3Pixel[1]=krosaGL3Pixel[2]=0; krosaGL3Framebuffer=0; krosaGL3IndexCount=krosaGL3Primitive=krosaGL3VertexCount=krosaGL3MeshCount=krosaGL3AttribCount=-1; krosaGL3ColoredPixels=krosaGL3MinX=krosaGL3MinY=krosaGL3MaxX=krosaGL3MaxY=krosaGL3BluePixels=krosaGL3NonBlackPixels=krosaGL3MaxGreen=-1; }
+static int krosaGL3ColoredPixels=-1, krosaGL3MinX=-1, krosaGL3MinY=-1, krosaGL3MaxX=-1, krosaGL3MaxY=-1, krosaGL3BluePixels=-1, krosaGL3NonBlackPixels=-1, krosaGL3MaxGreen=-1, krosaGL3PreBluePixels=-1;
+void krosaResetGL3DrawDiagnostics(void) { krosaGL3DrawFlags = 0; krosaGL3Pixel[0]=krosaGL3Pixel[1]=krosaGL3Pixel[2]=0; krosaGL3Framebuffer=0; krosaGL3IndexCount=krosaGL3Primitive=krosaGL3VertexCount=krosaGL3MeshCount=krosaGL3AttribCount=-1; krosaGL3ColoredPixels=krosaGL3MinX=krosaGL3MinY=krosaGL3MaxX=krosaGL3MaxY=krosaGL3BluePixels=krosaGL3NonBlackPixels=krosaGL3MaxGreen=krosaGL3PreBluePixels=-1; }
 int krosaGetGL3DrawDiagnostics(void) { return krosaGL3DrawFlags; }
 int krosaGetGL3DrawPixel(int i) { return i >= 0 && i < 3 ? krosaGL3Pixel[i] : -1; }
 int krosaGetGL3DrawFramebuffer(void) { return krosaGL3Framebuffer; }
 int krosaGetGL3DrawViewport(int i) { return i >= 0 && i < 4 ? krosaGL3Viewport[i] : -1; }
-int krosaGetGL3DrawMetric(int i) { switch(i){case 0:return krosaGL3IndexCount;case 1:return krosaGL3Primitive;case 2:return krosaGL3VertexCount;case 3:return krosaGL3MeshCount;case 4:return krosaGL3AttribCount;case 5:return krosaGL3ColoredPixels;case 6:return krosaGL3MinX;case 7:return krosaGL3MinY;case 8:return krosaGL3MaxX;case 9:return krosaGL3MaxY;case 10:return krosaGL3BluePixels;case 11:return krosaGL3NonBlackPixels;case 12:return krosaGL3MaxGreen;default:return -1;} }
+int krosaGetGL3DrawMetric(int i) { switch(i){case 0:return krosaGL3IndexCount;case 1:return krosaGL3Primitive;case 2:return krosaGL3VertexCount;case 3:return krosaGL3MeshCount;case 4:return krosaGL3AttribCount;case 5:return krosaGL3ColoredPixels;case 6:return krosaGL3MinX;case 7:return krosaGL3MinY;case 8:return krosaGL3MaxX;case 9:return krosaGL3MaxY;case 10:return krosaGL3BluePixels;case 11:return krosaGL3NonBlackPixels;case 12:return krosaGL3MaxGreen;case 13:return krosaGL3PreBluePixels;default:return -1;} }
 }
 """),
     ('void\ndefaultRenderCB(Atomic *atomic, InstanceDataHeader *header)\n{',
@@ -135,6 +135,21 @@ int krosaGetGL3DrawMetric(int i) { switch(i){case 0:return krosaGL3IndexCount;ca
 \t\tif(positionBuffer) krosaGL3DrawFlags |= 16;
 \t\tif(glGetError() == GL_NO_ERROR) krosaGL3DrawFlags |= 32;
 \t\tdrawInst(header, inst);
+\t\t// Snapshot framebuffer BEFORE the diagnostic bypass to measure librw's own shader.
+\t\t{
+\t\t\tconst int preW = glGlobals.presentWidth, preH = glGlobals.presentHeight;
+\t\t\tif(preW > 0 && preH > 0 && preW <= 4096 && preH <= 4096){
+\t\t\t\tstd::vector<GLubyte> preScan((size_t)preW * (size_t)preH * 4);
+\t\t\t\tglReadPixels(0, 0, preW, preH, GL_RGBA, GL_UNSIGNED_BYTE, preScan.data());
+\t\t\t\tif(glGetError() == GL_NO_ERROR){
+\t\t\t\t\tkrosaGL3PreBluePixels = 0;
+\t\t\t\t\tfor(int py = 0; py < preH; py++) for(int px = 0; px < preW; px++){
+\t\t\t\t\t\tconst GLubyte *pp = &preScan[((size_t)py * preW + px) * 4];
+\t\t\t\t\t\tif(pp[2] > pp[1] + 40 && pp[2] > pp[0] + 40) krosaGL3PreBluePixels++;
+\t\t\t\t\t}
+\t\t\t\t}
+\t\t\t}
+\t\t}
 \t\t// Diagnostic-only bypass: redraw the same indexed VBO with a minimal GLES2 shader.
 \t\t{
 \t\t\tconst char *diagVS = "attribute vec3 in_pos; void main(){ gl_Position = vec4(in_pos, 1.0); }";
