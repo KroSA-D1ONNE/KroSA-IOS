@@ -62,7 +62,7 @@ struct GPUTestView: View {
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundStyle(.green)
 
-                Text("Cuadrilátero texturizado con UV. La textura se genera en memoria; no usa imágenes externas ni archivos de GTA.")
+                Text("El fondo cuadriculado valida OpenGL ES nativo. El triángulo verde lo dibuja librw GL3/EAGL con un material sin textura: comprueba también el enlace de la textura blanca de reemplazo.")
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
