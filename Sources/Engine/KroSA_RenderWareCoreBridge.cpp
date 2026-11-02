@@ -17,6 +17,7 @@ extern "C" int krosaGetLastGeometryDrawFlags(void) { return krosaLastGeometryDra
 extern "C" int krosaGetLastGeometryPixel(int i) { return krosaGetGL3DrawPixel(i); }
 extern "C" int krosaGetLastGeometryFramebuffer(void) { return krosaGetGL3DrawFramebuffer(); }
 extern "C" int krosaGetLastGeometryViewport(int i) { return krosaGetGL3DrawViewport(i); }
+extern "C" int krosaGetLastGeometryMetric(int i) { typedef int (*GetMetricProc)(int); GetMetricProc getMetric = reinterpret_cast<GetMetricProc>(dlsym(RTLD_DEFAULT, "krosaGetGL3DrawMetric")); return getMetric ? getMetric(i) : -1; }
 
 extern "C" int krosaRenderWareCoreSmokeTest(void) {
     if (rw::Engine::state != rw::Engine::Dead) {
