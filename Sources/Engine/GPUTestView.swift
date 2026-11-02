@@ -123,6 +123,21 @@ private struct GLES2TextureView: UIViewRepresentable {
         context.coordinator.onContextValidated = onContextValidated
         context.coordinator.onGL3Initialized = onGL3Initialized
         context.coordinator.onGeometryDrawn = onGeometryDrawn
+
+        #if targetEnvironment(simulator)
+        // The hosted macOS simulator crashes in its GLKit/GLES dispatch (null function
+        // pointer) before the renderer can run. Keep simulator CI UI-only; the real
+        // EAGL/librw path below is compiled and used on physical iOS devices.
+        let label = UILabel()
+        label.text = "GPU REAL OMITIDA EN SIMULADOR CI\\nLa prueba EAGL / librw debe ejecutarse en un iPhone físico."
+        label.textColor = .systemOrange
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        onContextValidated(false)
+        onGL3Initialized(-91)
+        onGeometryDrawn(-91)
+        return label
+        #else
         guard let glContext = context.coordinator.glContext else {
             let label = UILabel()
             label.text = "NO SE PUDO CREAR EAGLContext (OpenGL ES 2.0)"
@@ -142,6 +157,7 @@ private struct GLES2TextureView: UIViewRepresentable {
         view.enableSetNeedsDisplay = true
         view.setNeedsDisplay()
         return view
+        #endif
     }
 
     func updateUIView(_ uiView: UIView, context: Context) {
