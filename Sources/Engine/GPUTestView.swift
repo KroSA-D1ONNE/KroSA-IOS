@@ -295,7 +295,10 @@ private struct GLES2TextureView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: UIView, context: Context) {
-        (uiView as? GLKView)?.setNeedsDisplay()
+        // Do not redraw merely because SwiftUI refreshed status labels.
+        // The first frame is requested by makeUIView/layoutSubviews; camera
+        // gestures explicitly request their own frames. Re-entering librw
+        // from a status-only SwiftUI update recreated native GPU resources.
     }
 
 
