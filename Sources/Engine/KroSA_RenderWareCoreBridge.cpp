@@ -90,7 +90,7 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
 
     int result = -5;
     rw::Geometry *geometry = rw::Geometry::create(
-        3, 1, rw::Geometry::POSITIONS | rw::Geometry::PRELIT);
+        3, 1, rw::Geometry::POSITIONS | rw::Geometry::PRELIT | rw::Geometry::MODULATE);
     rw::Material *material = nullptr;
     rw::Frame *frame = nullptr;
     rw::Atomic *atomic = nullptr;
@@ -98,6 +98,7 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
 
     if (geometry) {
         material = rw::Material::create();
+        if (material) material->color = {45, 235, 95, 255};
         if (material && geometry->matList.appendMaterial(material) == 0) {
             material->destroy();
             material = nullptr;
@@ -136,7 +137,11 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
                 rw::SetRenderState(rw::ZTESTENABLE, 0);
                 rw::SetRenderState(rw::CULLMODE, rw::CULLNONE);
                 atomic->render();
-                result = glGetError() == GL_NO_ERROR ? 1 : -6;
+                glFinish();
+                GLubyte centerPixel[4] = {0, 0, 0, 0};
+                glReadPixels(width / 2, height / 2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, centerPixel);
+                const bool greenPixel = centerPixel[1] > centerPixel[0] + 35 && centerPixel[1] > centerPixel[2] + 20;
+                result = glGetError() != GL_NO_ERROR ? -6 : (greenPixel ? 1 : -7);
             }
         }
     }
