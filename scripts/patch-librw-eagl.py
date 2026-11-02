@@ -84,7 +84,32 @@ edit("src/engine.cpp", [
 ])
 
 
-# Keep upstream simple fragment shader intact: texture sampling, fog and alpha test.
+# Isolate fragment inputs: preserve interpolated vertex color while bypassing
+# texture sampling, fog and alpha test. This distinguishes bad fragment inputs
+# from vertex/uniform/matrix failures without replacing librw's draw path.
+edit("src/gl/shaders/simple_fs_gl.inc", [
+    ('''const char *simple_frag_src =
+"uniform sampler2D tex0;\\n"
+
+"FSIN vec4 v_color;\\n"
+"FSIN vec2 v_tex0;\\n"
+"FSIN float v_fog;\\n"
+
+"void\\n"
+"main(void)\\n"
+"{\\n"
+"\\tvec4 color = v_color*texture(tex0, vec2(v_tex0.x, 1.0-v_tex0.y));\\n"
+"\\tcolor.rgb = mix(u_fogColor.rgb, color.rgb, v_fog);\\n"
+"\\tDoAlphaTest(color.a);\\n"
+"\\tFRAGCOLOR(color);\\n"
+"}\\n"
+
+;''',
+     '''const char *simple_frag_src =
+"FSIN vec4 v_color;\\n"
+"void main(void) { FRAGCOLOR(v_color); }\\n"
+;''')
+])
 
 print("Applied iOS EAGL host patch to pinned librw source")
 
