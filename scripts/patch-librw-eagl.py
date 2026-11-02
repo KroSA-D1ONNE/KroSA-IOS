@@ -80,6 +80,11 @@ print("Applied iOS EAGL host patch to pinned librw source")
 # vertex attribute bindings are still active. These flags are consumed by the
 # host bridge after Atomic::render() returns.
 edit("src/gl/gl3render.cpp", [
+    ('\\tflushCache();\\n\\tglDrawElements(header->primType, inst->numIndex,',
+     '\\tflushCache();\\n\\t// Reset host GLKView raster state that librw cache may not track.\\n\\tglDisable(GL_SCISSOR_TEST);\\n\\tglDisable(GL_DEPTH_TEST);\\n\\tglDisable(GL_CULL_FACE);\\n\\tglDisable(GL_BLEND);\\n\\tglDisable(GL_STENCIL_TEST);\\n\\tglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);\\n\\tglDepthMask(GL_TRUE);\\n\\tglViewport(0, 0, glGlobals.presentWidth, glGlobals.presentHeight);\\n\\tglDrawElements(header->primType, inst->numIndex,')
+])
+
+edit("src/gl/gl3render.cpp", [
     ('#include "rwgl3impl.h"\n',
      '#include "rwgl3impl.h"\n\nextern "C" {\nstatic int krosaGL3DrawFlags = 0;\nstatic int krosaGL3Pixel[3] = {0,0,0};\nstatic int krosaGL3Framebuffer = 0;\nstatic int krosaGL3Viewport[4] = {0,0,0,0};\nvoid krosaResetGL3DrawDiagnostics(void) { krosaGL3DrawFlags = 0; krosaGL3Pixel[0]=krosaGL3Pixel[1]=krosaGL3Pixel[2]=0; krosaGL3Framebuffer=0; }\nint krosaGetGL3DrawDiagnostics(void) { return krosaGL3DrawFlags; }\nint krosaGetGL3DrawPixel(int i) { return i >= 0 && i < 3 ? krosaGL3Pixel[i] : -1; }\nint krosaGetGL3DrawFramebuffer(void) { return krosaGL3Framebuffer; }\nint krosaGetGL3DrawViewport(int i) { return i >= 0 && i < 4 ? krosaGL3Viewport[i] : -1; }\n}\n'),
     ('void\ndefaultRenderCB(Atomic *atomic, InstanceDataHeader *header)\n{',
