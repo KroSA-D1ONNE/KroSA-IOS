@@ -51,6 +51,34 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
+      - name: Run GPU smoke test in iOS Simulator
+        run: |
+          SIMULATOR_ID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); xs=[x for group in d["devices"].values() for x in group if x["isAvailable"] and x["name"].startswith("iPhone")]; print(xs[0]["udid"] if xs else "")')
+          if [ -z "$SIMULATOR_ID" ]; then
+            echo "::error::No hay un simulador iPhone disponible en el runner"
+            exit 1
+          fi
+          echo "Usando simulador: $SIMULATOR_ID"
+          xcrun simctl boot "$SIMULATOR_ID" 2>/dev/null || true
+          xcrun simctl bootstatus "$SIMULATOR_ID" -b
+          xcodebuild test \
+            -project KroSA.xcodeproj \
+            -scheme KroSA \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -derivedDataPath build/SimulatorDerivedData \
+            -resultBundlePath build/KroSA-Simulator.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Upload simulator diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: KroSA-simulator-diagnostics
+          path: |
+            build/KroSA-Simulator.xcresult
+            ~/Library/Logs/DiagnosticReports
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Build for iOS
         run: |
           xcodebuild \
