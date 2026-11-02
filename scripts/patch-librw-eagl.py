@@ -90,10 +90,12 @@ shader_source = p.read_text()
 shader_start = shader_source.index("const char *simple_frag_src =")
 # Upstream terminates this adjacent-string C declaration with a standalone
 # semicolon on its own line (not a trailing `";`).
-terminator = shader_source.find("\\n;", shader_start)
+# The upstream declaration closes after its final adjacent string,
+# followed by a blank line and a standalone semicolon.
+terminator = shader_source.find("\\n\\n;", shader_start)
 if terminator < 0:
-    raise RuntimeError("Could not find standalone terminator of simple fragment shader declaration")
-shader_end = terminator + 2
+    raise RuntimeError("Could not find final blank-line semicolon of simple fragment shader declaration")
+shader_end = terminator + 3
 c_nl = chr(92) + "n"
 replacement = "\n".join([
     "const char *simple_frag_src =",
