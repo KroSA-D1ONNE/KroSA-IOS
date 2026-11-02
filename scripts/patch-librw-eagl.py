@@ -116,34 +116,81 @@ int krosaGetGL3DrawMetric(int i) { switch(i){case 0:return krosaGL3IndexCount;ca
     ('void\ndefaultRenderCB(Atomic *atomic, InstanceDataHeader *header)\n{',
      'void\ndefaultRenderCB(Atomic *atomic, InstanceDataHeader *header)\n{\n\tkrosaGL3DrawFlags |= 128;'),
     ('\t\tdrawInst(header, inst);',
-     '\t\tkrosaGL3IndexCount = inst->numIndex;\n\t\tkrosaGL3Primitive = header->primType;\n\t\tkrosaGL3VertexCount = header->totalNumVertex;\n\t\tkrosaGL3MeshCount = header->numMeshes;\n\t\tkrosaGL3AttribCount = header->numAttribs;\n\t\tGLint program = 0, arrayBuffer = 0, elementBuffer = 0;\n\t\tGLint positionEnabled = 0, positionBuffer = 0;\n\t\tglGetIntegerv(GL_CURRENT_PROGRAM, &program);\n\t\tglGetIntegerv(GL_ARRAY_BUFFER_BINDING, &arrayBuffer);\n\t\tglGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &elementBuffer);\n\t\tglGetVertexAttribiv(ATTRIB_POS, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &positionEnabled);\n\t\tglGetVertexAttribiv(ATTRIB_POS, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING, &positionBuffer);\n\t\tif(program) krosaGL3DrawFlags |= 1;\n\t\tif(arrayBuffer) krosaGL3DrawFlags |= 2;\n\t\tif(elementBuffer) krosaGL3DrawFlags |= 4;\n\t\tif(positionEnabled) krosaGL3DrawFlags |= 8;\n\t\tif(positionBuffer) krosaGL3DrawFlags |= 16;\n\t\tif(glGetError() == GL_NO_ERROR) krosaGL3DrawFlags |= 32;\n\t\tdrawInst(header, inst);
-\t\t// Diagnostic-only bypass: draw the same indexed VBO with a minimal GLES2
-\t\t// shader. This separates bad geometry/buffers from librw's default shader.
+     r"""\t\tkrosaGL3IndexCount = inst->numIndex;
+\t\tkrosaGL3Primitive = header->primType;
+\t\tkrosaGL3VertexCount = header->totalNumVertex;
+\t\tkrosaGL3MeshCount = header->numMeshes;
+\t\tkrosaGL3AttribCount = header->numAttribs;
+\t\tGLint program = 0, arrayBuffer = 0, elementBuffer = 0;
+\t\tGLint positionEnabled = 0, positionBuffer = 0;
+\t\tglGetIntegerv(GL_CURRENT_PROGRAM, &program);
+\t\tglGetIntegerv(GL_ARRAY_BUFFER_BINDING, &arrayBuffer);
+\t\tglGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &elementBuffer);
+\t\tglGetVertexAttribiv(ATTRIB_POS, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &positionEnabled);
+\t\tglGetVertexAttribiv(ATTRIB_POS, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING, &positionBuffer);
+\t\tif(program) krosaGL3DrawFlags |= 1;
+\t\tif(arrayBuffer) krosaGL3DrawFlags |= 2;
+\t\tif(elementBuffer) krosaGL3DrawFlags |= 4;
+\t\tif(positionEnabled) krosaGL3DrawFlags |= 8;
+\t\tif(positionBuffer) krosaGL3DrawFlags |= 16;
+\t\tif(glGetError() == GL_NO_ERROR) krosaGL3DrawFlags |= 32;
+\t\tdrawInst(header, inst);
+\t\t// Diagnostic-only bypass: redraw the same indexed VBO with a minimal GLES2 shader.
 \t\t{
 \t\t\tconst char *diagVS = "attribute vec3 in_pos; void main(){ gl_Position = vec4(in_pos, 1.0); }";
 \t\t\tconst char *diagFS = "precision mediump float; void main(){ gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0); }";
-\t\t\tGLuint vs = glCreateShader(GL_VERTEX_SHADER), fs = glCreateShader(GL_FRAGMENT_SHADER), program = 0;
+\t\t\tGLuint vs = glCreateShader(GL_VERTEX_SHADER), fs = glCreateShader(GL_FRAGMENT_SHADER), diagProgram = 0;
 \t\t\tGLint ok = 0;
 \t\t\tglShaderSource(vs, 1, &diagVS, NULL); glCompileShader(vs); glGetShaderiv(vs, GL_COMPILE_STATUS, &ok);
 \t\t\tif(ok){
 \t\t\t\tglShaderSource(fs, 1, &diagFS, NULL); glCompileShader(fs); glGetShaderiv(fs, GL_COMPILE_STATUS, &ok);
 \t\t\t}
 \t\t\tif(ok){
-\t\t\t\tprogram = glCreateProgram(); glAttachShader(program, vs); glAttachShader(program, fs);
-\t\t\t\tglBindAttribLocation(program, ATTRIB_POS, "in_pos"); glLinkProgram(program);
-\t\t\t\tglGetProgramiv(program, GL_LINK_STATUS, &ok);
+\t\t\t\tdiagProgram = glCreateProgram(); glAttachShader(diagProgram, vs); glAttachShader(diagProgram, fs);
+\t\t\t\tglBindAttribLocation(diagProgram, ATTRIB_POS, "in_pos"); glLinkProgram(diagProgram);
+\t\t\t\tglGetProgramiv(diagProgram, GL_LINK_STATUS, &ok);
 \t\t\t}
-\t\t\tif(ok && program){
+\t\t\tif(ok && diagProgram){
 \t\t\t\tGLint previousProgram = 0; glGetIntegerv(GL_CURRENT_PROGRAM, &previousProgram);
-\t\t\t\tglUseProgram(program);
+\t\t\t\tglUseProgram(diagProgram);
 \t\t\t\tglDisable(GL_SCISSOR_TEST); glDisable(GL_DEPTH_TEST); glDisable(GL_CULL_FACE);
 \t\t\t\tglDisable(GL_BLEND); glDisable(GL_STENCIL_TEST);
 \t\t\t\tglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 \t\t\t\tglDrawElements(header->primType, inst->numIndex, GL_UNSIGNED_SHORT, (void*)(uintptr)inst->offset);
 \t\t\t\tglUseProgram((GLuint)previousProgram);
 \t\t\t}
-\t\t\tif(program) glDeleteProgram(program);
-\t\t\tif(vs) glDeleteShader(vs); if(fs) glDeleteShader(fs);
+\t\t\tif(diagProgram) glDeleteProgram(diagProgram);
+\t\t\tif(vs) glDeleteShader(vs);
+\t\t\tif(fs) glDeleteShader(fs);
 \t\t}
-\t\tif(glGetError() == GL_NO_ERROR) krosaGL3DrawFlags |= 64;\n\t\tglGetIntegerv(GL_FRAMEBUFFER_BINDING, &krosaGL3Framebuffer);\n\t\tglGetIntegerv(GL_VIEWPORT, krosaGL3Viewport);\n\t\tGLubyte pixel[4] = {0,0,0,0};\n\t\tglReadPixels(glGlobals.presentWidth/2, glGlobals.presentHeight/2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);\n\t\tkrosaGL3Pixel[0]=pixel[0]; krosaGL3Pixel[1]=pixel[1]; krosaGL3Pixel[2]=pixel[2];\n\t\tif(glGetError() == GL_NO_ERROR) krosaGL3DrawFlags |= 256;\n\t\t// Scan the full drawable: the center pixel alone cannot prove coverage.\n\t\tconst int scanW = glGlobals.presentWidth, scanH = glGlobals.presentHeight;\n\t\tif(scanW > 0 && scanH > 0 && scanW <= 4096 && scanH <= 4096){\n\t\t\tstd::vector<GLubyte> scan((size_t)scanW * (size_t)scanH * 4);\n\t\t\tglReadPixels(0, 0, scanW, scanH, GL_RGBA, GL_UNSIGNED_BYTE, scan.data());\n\t\t\tif(glGetError() == GL_NO_ERROR){\n\t\t\t\tkrosaGL3ColoredPixels = 0; krosaGL3BluePixels = 0; krosaGL3NonBlackPixels = 0; krosaGL3MaxGreen = 0;\n\t\t\t\tkrosaGL3MinX = scanW; krosaGL3MinY = scanH; krosaGL3MaxX = -1; krosaGL3MaxY = -1;\n\t\t\t\tfor(int y = 0; y < scanH; y++) for(int x = 0; x < scanW; x++){\n\t\t\t\t\tconst GLubyte *p = &scan[((size_t)y * scanW + x) * 4];\n\t\t\t\t\tif(p[0] > 8 || p[1] > 8 || p[2] > 8) krosaGL3NonBlackPixels++;\n\t\t\t\t\tif(p[2] > p[1] + 40 && p[2] > p[0] + 40) krosaGL3BluePixels++;\n\t\t\t\t\tif(p[1] > krosaGL3MaxGreen) krosaGL3MaxGreen = p[1];\n\t\t\t\t\tif(p[1] > p[0] + 25 && p[1] > p[2] + 15 && p[1] > 30){\n\t\t\t\t\t\tkrosaGL3ColoredPixels++;\n\t\t\t\t\t\tif(x < krosaGL3MinX) krosaGL3MinX = x; if(x > krosaGL3MaxX) krosaGL3MaxX = x;\n\t\t\t\t\t\tif(y < krosaGL3MinY) krosaGL3MinY = y; if(y > krosaGL3MaxY) krosaGL3MaxY = y;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tif(krosaGL3ColoredPixels == 0) krosaGL3MinX = krosaGL3MinY = krosaGL3MaxX = krosaGL3MaxY = -1;\n\t\t\t\tkrosaGL3DrawFlags |= 512;\n\t\t\t}\n\t\t}')
+\t\tif(glGetError() == GL_NO_ERROR) krosaGL3DrawFlags |= 64;
+\t\tglGetIntegerv(GL_FRAMEBUFFER_BINDING, &krosaGL3Framebuffer);
+\t\tglGetIntegerv(GL_VIEWPORT, krosaGL3Viewport);
+\t\tGLubyte pixel[4] = {0,0,0,0};
+\t\tglReadPixels(glGlobals.presentWidth/2, glGlobals.presentHeight/2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+\t\tkrosaGL3Pixel[0]=pixel[0]; krosaGL3Pixel[1]=pixel[1]; krosaGL3Pixel[2]=pixel[2];
+\t\tif(glGetError() == GL_NO_ERROR) krosaGL3DrawFlags |= 256;
+\t\t// Scan the full drawable: the center pixel alone cannot prove coverage.
+\t\tconst int scanW = glGlobals.presentWidth, scanH = glGlobals.presentHeight;
+\t\tif(scanW > 0 && scanH > 0 && scanW <= 4096 && scanH <= 4096){
+\t\t\tstd::vector<GLubyte> scan((size_t)scanW * (size_t)scanH * 4);
+\t\t\tglReadPixels(0, 0, scanW, scanH, GL_RGBA, GL_UNSIGNED_BYTE, scan.data());
+\t\t\tif(glGetError() == GL_NO_ERROR){
+\t\t\t\tkrosaGL3ColoredPixels = 0; krosaGL3BluePixels = 0; krosaGL3NonBlackPixels = 0; krosaGL3MaxGreen = 0;
+\t\t\t\tkrosaGL3MinX = scanW; krosaGL3MinY = scanH; krosaGL3MaxX = -1; krosaGL3MaxY = -1;
+\t\t\t\tfor(int y = 0; y < scanH; y++) for(int x = 0; x < scanW; x++){
+\t\t\t\t\tconst GLubyte *p = &scan[((size_t)y * scanW + x) * 4];
+\t\t\t\t\tif(p[0] > 8 || p[1] > 8 || p[2] > 8) krosaGL3NonBlackPixels++;
+\t\t\t\t\tif(p[2] > p[1] + 40 && p[2] > p[0] + 40) krosaGL3BluePixels++;
+\t\t\t\t\tif(p[1] > krosaGL3MaxGreen) krosaGL3MaxGreen = p[1];
+\t\t\t\t\tif(p[1] > p[0] + 25 && p[1] > p[2] + 15 && p[1] > 30){
+\t\t\t\t\t\tkrosaGL3ColoredPixels++;
+\t\t\t\t\t\tif(x < krosaGL3MinX) krosaGL3MinX = x; if(x > krosaGL3MaxX) krosaGL3MaxX = x;
+\t\t\t\t\t\tif(y < krosaGL3MinY) krosaGL3MinY = y; if(y > krosaGL3MaxY) krosaGL3MaxY = y;
+\t\t\t\t\t}
+\t\t\t\t}
+\t\t\t\tif(krosaGL3ColoredPixels == 0) krosaGL3MinX = krosaGL3MinY = krosaGL3MaxX = krosaGL3MaxY = -1;
+\t\t\t\tkrosaGL3DrawFlags |= 512;
+\t\t\t}
+\t\t}""")
 ])
