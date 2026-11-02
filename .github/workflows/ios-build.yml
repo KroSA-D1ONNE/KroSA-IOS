@@ -11,7 +11,8 @@ on:
 
 jobs:
   build:
-    runs-on: macos-15
+    # macos-14 usa otra imagen/cola de runners que macos-15.
+    runs-on: macos-14
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,8 +55,7 @@ jobs:
         run: xcodegen generate
 
       - name: Preserve device librw archive
-        run: |
-          cp build/librw-ios/lib/librw.a build/librw-device.a
+        run: cp build/librw-ios/lib/librw.a build/librw-device.a
 
       - name: Build librw GL3 backend for iOS Simulator arm64
         run: |
@@ -82,7 +82,6 @@ jobs:
           fi
           echo "Usando simulador: $SIMULATOR_ID"
           xcrun simctl boot "$SIMULATOR_ID" 2>/dev/null || true
-          xcrun simctl bootstatus "$SIMULATOR_ID" -b
           xcodebuild test \
             -project KroSA.xcodeproj \
             -scheme KroSA \
