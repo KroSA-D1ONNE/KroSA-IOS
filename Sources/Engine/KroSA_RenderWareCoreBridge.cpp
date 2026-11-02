@@ -12,6 +12,9 @@ extern "C" int krosaGetGL3DrawFramebuffer(void);
 extern "C" int krosaGetGL3DrawViewport(int);
 static int krosaLastGeometryDrawFlags = 0;
 extern "C" int krosaGetLastGeometryDrawFlags(void) { return krosaLastGeometryDrawFlags; }
+extern "C" int krosaGetLastGeometryPixel(int i) { return krosaGetGL3DrawPixel(i); }
+extern "C" int krosaGetLastGeometryFramebuffer(void) { return krosaGetGL3DrawFramebuffer(); }
+extern "C" int krosaGetLastGeometryViewport(int i) { return krosaGetGL3DrawViewport(i); }
 
 extern "C" int krosaRenderWareCoreSmokeTest(void) {
     if (rw::Engine::state != rw::Engine::Dead) {
