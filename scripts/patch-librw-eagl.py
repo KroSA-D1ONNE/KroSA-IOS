@@ -81,8 +81,8 @@ print("Applied iOS EAGL host patch to pinned librw source")
 # host bridge after Atomic::render() returns.
 edit("src/gl/gl3render.cpp", [
     ('\t\tif((vsBits & VSLIGHT_MASK) == 0){',
-     '\\t\t// Reset host GLKView raster state before librw submits geometry.\\n\\t\tglDisable(GL_SCISSOR_TEST);\\n\\t\tglDisable(GL_DEPTH_TEST);\\n\\t\tglDisable(GL_CULL_FACE);\\n\\t\tglDisable(GL_BLEND);\\n\\t\tglDisable(GL_STENCIL_TEST);\\n\\t\tglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);\\n\\t\tglDepthMask(GL_TRUE);\\n\\t\tglViewport(0, 0, glGlobals.presentWidth, glGlobals.presentHeight);\\n\\t\tif((vsBits & VSLIGHT_MASK) == 0){')
-])
+     ('\t\tif((vsBits & VSLIGHT_MASK) == 0){',
+      '\t\t// Reset host GLKView raster state before librw submits geometry.\n\t\tglDisable(GL_SCISSOR_TEST);\n\t\tglDisable(GL_DEPTH_TEST);\n\t\tglDisable(GL_CULL_FACE);\n\t\tglDisable(GL_BLEND);\n\t\tglDisable(GL_STENCIL_TEST);\n\t\tglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);\n\t\tglDepthMask(GL_TRUE);\n\t\tglViewport(0, 0, glGlobals.presentWidth, glGlobals.presentHeight);\n\t\tif((vsBits & VSLIGHT_MASK) == 0){')
 
 edit("src/gl/gl3render.cpp", [
     ('#include "rwgl3impl.h"\n',
