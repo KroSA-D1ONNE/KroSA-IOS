@@ -65,7 +65,7 @@ struct GPUTestView: View {
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundStyle(.green)
 
-                Text("El fondo cuadriculado valida OpenGL ES nativo. El triángulo verde lo dibuja librw GL3/EAGL con un material sin textura: comprueba también el enlace de la textura blanca de reemplazo.")
+                Text("El fondo cuadriculado valida OpenGL ES nativo. El triángulo con patrón verde lo dibuja librw GL3/EAGL usando una textura RGBA creada y subida mediante Raster::lock/unlock.")
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
@@ -172,7 +172,7 @@ struct GPUTestView: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 220)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                    Text("El fondo cuadriculado es GLKit; el triángulo verde debe dibujarlo el pipeline GL3 de librw.")
+                    Text("El fondo cuadriculado es GLKit; el triángulo con damero verde debe dibujarlo el pipeline GL3 de librw.")
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundStyle(.green)
                         .multilineTextAlignment(.center)
