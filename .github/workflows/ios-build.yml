@@ -1,0 +1,44 @@
+name: KroSA iOS Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build for iOS
+        run: |
+          xcodebuild \
+            -project KroSA.xcodeproj \
+            -scheme KroSA \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload app build
+        uses: actions/upload-artifact@v4
+        with:
+          name: KroSA-iOS-unsigned-app
+          path: build/DerivedData/Build/Products/Release-iphoneos/KroSA.app
+          if-no-files-found: error
+          retention-days: 14
