@@ -211,7 +211,10 @@ private struct GLES2TextureView: UIViewRepresentable {
                 onContextValidated?(krosaOpenGLESContextSmokeTest() == 1)
             }
 
-            glViewport(0, 0, GLsizei(view.drawableWidth), GLsizei(view.drawableHeight))
+            // Avoid GLKView drawable size getters: their GLES dispatch crashes on this simulator.
+            let drawableWidth = max(1, Int32(view.bounds.width * view.contentScaleFactor))
+            let drawableHeight = max(1, Int32(view.bounds.height * view.contentScaleFactor))
+            glViewport(0, 0, drawableWidth, drawableHeight)
             glClearColor(0.025, 0.04, 0.03, 1.0)
             glClear(GLbitfield(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT))
 
@@ -242,7 +245,7 @@ private struct GLES2TextureView: UIViewRepresentable {
             if !didRunGeometryTest {
                 didRunGeometryTest = true
                 let result = krosaLibrwGL3GeometrySmokeTest(
-                    Int32(view.drawableWidth), Int32(view.drawableHeight)
+                    drawableWidth, drawableHeight
                 )
                 onGL3Initialized?(krosaGetLastGeometryInitStatus())
                 onGeometryDrawn?(result)
