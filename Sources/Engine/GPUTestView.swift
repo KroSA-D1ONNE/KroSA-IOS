@@ -329,8 +329,7 @@ private struct GLKClearTestView: UIViewRepresentable {
 
     final class Renderer: NSObject, GLKViewDelegate {
         func glkView(_ view: GLKView, drawIn rect: CGRect) {
-            guard let glContext = view.context,
-                  EAGLContext.setCurrent(glContext) else { return }
+            guard EAGLContext.setCurrent(view.context) else { return }
             let width = max(1, GLsizei(view.bounds.width * view.contentScaleFactor))
             let height = max(1, GLsizei(view.bounds.height * view.contentScaleFactor))
             glViewport(0, 0, width, height)
