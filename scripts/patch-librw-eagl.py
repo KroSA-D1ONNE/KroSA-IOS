@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""Apply the small, pinned iOS/EAGL host adaptation to upstream librw."""
+from pathlib import Path
+
+ROOT = Path("vendor/librw")
+
+def edit(path, replacements):
+    p = ROOT / path
+    s = p.read_text()
+    for old, new in replacements:
+        count = s.count(old)
+        if count != 1:
+            raise SystemExit(f"{path}: expected one match, got {count}: {old[:90]!r}")
+        s = s.replace(old, new, 1)
+    p.write_text(s)
+
+edit("CMakeLists.txt", [
+    ('set(LIBRW_GL3_GFXLIBS "GLFW" "SDL2" "SDL3")',
+     'set(LIBRW_GL3_GFXLIBS "GLFW" "SDL2" "SDL3" "EAGL")')
+])
+
+edit("src/CMakeLists.txt", [
+    ('        target_link_libraries(librw\n            PUBLIC\n                SDL3::SDL3\n        )\n    endif()\n\n    set(OpenGL_GL_PREFERENCE GLVND)',
+     '        target_link_libraries(librw\n            PUBLIC\n                SDL3::SDL3\n        )\n    elseif(LIBRW_GL3_GFXLIB STREQUAL "EAGL")\n        target_compile_definitions(librw PUBLIC LIBRW_EAGL)\n        target_link_libraries(librw PUBLIC "-framework OpenGLES")\n    endif()\n\n    if(NOT LIBRW_GL3_GFXLIB STREQUAL "EAGL")\n    set(OpenGL_GL_PREFERENCE GLVND)')
+])
+
+# Close the conditional around desktop OpenGL discovery.
+p = ROOT / "src/CMakeLists.txt"
+s = p.read_text()
+old = '    endif()\nelseif(LIBRW_PLATFORM_D3D9)'
+if s.count(old) != 1:
+    raise SystemExit("src/CMakeLists.txt: cannot locate end of OpenGL discovery block")
+s = s.replace(old, '    endif()\n    endif()\nelseif(LIBRW_PLATFORM_D3D9)', 1)
+p.write_text(s)
+
+edit("src/gl/rwgl3.h", [
+    ('#elif defined(LIBRW_GLFW)\n#include <GLFW/glfw3.h>\n#else\n// sane fallback\n#define LIBRW_GLFW\n#include <GLFW/glfw3.h>\n#endif',
+     '#elif defined(LIBRW_GLFW)\n#include <GLFW/glfw3.h>\n#elif defined(LIBRW_EAGL)\n// The host application owns and makes the EAGLContext current.\n#else\n#error "Select a supported librw GL3 host backend"\n#endif'),
+    ('#elif defined(LIBRW_GLFW)\n\tGLFWwindow **window;\n#else\n    not implemented\n#endif\n\tint width, height;',
+     '#elif defined(LIBRW_GLFW)\n\tGLFWwindow **window;\n#elif defined(LIBRW_EAGL)\n\t// EAGL context is supplied by the host app; only drawable dimensions are needed.\n#else\n#error "Unsupported GL3 host backend"\n#endif\n\tint width, height;')
+])
+
+edit("src/gl/rwgl3impl.h", [
+    ('#elif defined(LIBRW_GLFW)\n\tGLFWvidmode mode;\n#else\n\tnot implemented\n#endif',
+     '#elif defined(LIBRW_GLFW)\n\tGLFWvidmode mode;\n#elif defined(LIBRW_EAGL)\n\tint width, height;\n#else\n#error "Unsupported GL3 host backend"\n#endif'),
+    ('#elif defined(LIBRW_GLFW)\n\tGLFWwindow **pWindow;\n\tGLFWwindow *window;\n\n\tGLFWmonitor *monitor;\n\tint numMonitors;\n\tint currentMonitor;\n#else\n\tnot implemented\n#endif',
+     '#elif defined(LIBRW_GLFW)\n\tGLFWwindow **pWindow;\n\tGLFWwindow *window;\n\n\tGLFWmonitor *monitor;\n\tint numMonitors;\n\tint currentMonitor;\n#elif defined(LIBRW_EAGL)\n\tint numDisplays;\n\tint currentDisplay;\n#else\n#error "Unsupported GL3 host backend"\n#endif')
+])
+
+edit("src/gl/gl3device.cpp", [
+    ('#include <assert.h>\n', '#include <assert.h>\n#ifdef LIBRW_EAGL\n#include <dlfcn.h>\n#endif\n'),
+    ('#elif defined(LIBRW_GLFW)\n\t\tglfwGetFramebufferSize(glGlobals.window, &r.w, &r.h);\n#else\n\t\tmissing implementation\n#endif',
+     '#elif defined(LIBRW_GLFW)\n\t\tglfwGetFramebufferSize(glGlobals.window, &r.w, &r.h);\n#elif defined(LIBRW_EAGL)\n\t\tr.w = glGlobals.presentWidth;\n\t\tr.h = glGlobals.presentHeight;\n#else\n#error "Missing framebuffer dimensions for GL3 host"\n#endif'),
+    ('\tglfwSwapBuffers(glGlobals.window);\n#else\n\tnot implemented\n#endif',
+     '\tglfwSwapBuffers(glGlobals.window);\n#elif defined(LIBRW_EAGL)\n\t// GLKView owns presentation; its delegate presents after this draw callback.\n\t(void)raster;\n\t(void)flags;\n#else\n#error "Missing raster presentation for GL3 host"\n#endif'),
+    ('static int\nstopGLFW(void)\n{\n\tglfwDestroyWindow(glGlobals.window);\n\treturn 1;\n}\n#else\nnot implemented\n#endif',
+     'static int\nstopGLFW(void)\n{\n\tglfwDestroyWindow(glGlobals.window);\n\treturn 1;\n}\n#elif defined(LIBRW_EAGL)\nstatic void *\nloadEAGLProc(const char *name)\n{\n\treturn dlsym(RTLD_DEFAULT, name);\n}\n\nstatic int\nopenEAGL(EngineOpenParams *params)\n{\n\tif(params == nil || params->width <= 0 || params->height <= 0)\n\t\treturn 0;\n\tglGlobals.winWidth = params->width;\n\tglGlobals.winHeight = params->height;\n\tglGlobals.winTitle = params->windowtitle;\n\tglGlobals.presentWidth = params->width;\n\tglGlobals.presentHeight = params->height;\n\tglGlobals.presentOffX = 0;\n\tglGlobals.presentOffY = 0;\n\tglGlobals.numDisplays = 1;\n\tglGlobals.currentDisplay = 0;\n\tgl3Caps.gles = 1;\n\tgl3Caps.glversion = 20;\n\treturn 1;\n}\n\nstatic int closeEAGL(void) { return 1; }\n\nstatic int\nstartEAGL(void)\n{\n\tif(!gladLoadGLES2Loader(loadEAGLProc, 20)){\n\t\tRWERROR((ERR_GENERAL, "Unable to load OpenGL ES 2 entry points from the current EAGL context"));\n\t\treturn 0;\n\t}\n\treturn glGetString(GL_VERSION) != nil;\n}\n\nstatic int stopEAGL(void) { return 1; }\n#else\n#error "Unsupported GL3 host backend"\n#endif'),
+    ('\tglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gl3Caps.maxAnisotropy);',
+     '\tgl3Caps.maxAnisotropy = 1.0f;\n\tif(GLAD_GL_EXT_texture_filter_anisotropic)\n\t\tglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gl3Caps.maxAnisotropy);'),
+    ('\tglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAnisotropy);',
+     '\tmaxAnisotropy = 1.0f;\n\tif(GLAD_GL_EXT_texture_filter_anisotropic)\n\t\tglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAnisotropy);'),
+    ('\t\t\t\tglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, (float)maxAniso);',
+     '\t\t\t\tif(GLAD_GL_EXT_texture_filter_anisotropic)\n\t\t\t\t\tglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, (float)maxAniso);'),
+    ('#elif defined(LIBRW_GLFW)\n\nstatic int\ndeviceSystemGLFW(DeviceReq req, void *arg, int32 n)',
+     '#elif defined(LIBRW_GLFW)\n\nstatic int\ndeviceSystemGLFW(DeviceReq req, void *arg, int32 n)'),
+    ('#else\n\nnot implemented\n\n#endif\n\nDevice renderdevice = {',
+     '#elif defined(LIBRW_EAGL)\nstatic int\ndeviceSystemEAGL(DeviceReq req, void *arg, int32 n)\n{\n\tswitch(req){\n\tcase DEVICEOPEN:\n\t\treturn openEAGL((EngineOpenParams*)arg);\n\tcase DEVICECLOSE:\n\t\treturn closeEAGL();\n\tcase DEVICEINIT:\n\t\treturn startEAGL() && initOpenGL();\n\tcase DEVICETERM:\n\t\treturn termOpenGL() && stopEAGL();\n\tcase DEVICEFINALIZE:\n\t\treturn finalizeOpenGL();\n\tcase DEVICEGETNUMSUBSYSTEMS:\n\t\treturn 1;\n\tcase DEVICEGETCURRENTSUBSYSTEM:\n\t\treturn 0;\n\tcase DEVICESETSUBSYSTEM:\n\t\treturn n == 0;\n\tcase DEVICEGETSUBSSYSTEMINFO:\n\t\tstrncpy(((SubSystemInfo*)arg)->name, "iOS EAGL", sizeof(SubSystemInfo::name));\n\t\treturn 1;\n\tcase DEVICEGETNUMVIDEOMODES:\n\t\treturn 1;\n\tcase DEVICEGETCURRENTVIDEOMODE:\n\t\treturn 0;\n\tcase DEVICESETVIDEOMODE:\n\t\treturn n == 0;\n\tcase DEVICEGETVIDEOMODEINFO: {\n\t\tVideoMode *mode = (VideoMode*)arg;\n\t\tmode->width = glGlobals.presentWidth;\n\t\tmode->height = glGlobals.presentHeight;\n\t\tmode->depth = 32;\n\t\tmode->flags = 0;\n\t\treturn 1;\n\t}\n\tcase DEVICEGETMAXMULTISAMPLINGLEVELS:\n\t\treturn 0;\n\tcase DEVICEGETMULTISAMPLINGLEVELS:\n\t\treturn 0;\n\tcase DEVICESETMULTISAMPLINGLEVELS:\n\t\treturn n == 0;\n\tdefault:\n\t\tassert(0 && "unsupported EAGL device request");\n\t\treturn 0;\n\t}\n}\n#endif\n\nDevice renderdevice = {'),
+    ('#elif defined(LIBRW_GLFW)\n\tgl3::deviceSystemGLFW\n#else\n\tnot implemented\n#endif',
+     '#elif defined(LIBRW_GLFW)\n\tgl3::deviceSystemGLFW\n#elif defined(LIBRW_EAGL)\n\tgl3::deviceSystemEAGL\n#else\n#error "Unsupported GL3 device system"\n#endif')
+])
+
+edit("src/engine.cpp", [
+    ('\tengine->device.system(DEVICEINIT, nil, 0);\n\n\tEngine::s_plglist.construct(engine);',
+     '\tif(!engine->device.system(DEVICEINIT, nil, 0))\n\t\treturn 0;\n\n\tEngine::s_plglist.construct(engine);')
+])
+
+print("Applied iOS EAGL host patch to pinned librw source")

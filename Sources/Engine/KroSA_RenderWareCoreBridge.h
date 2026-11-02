@@ -12,6 +12,10 @@ int krosaRenderWareCoreSmokeTest(void);
 /// Returns 1 when the current app-owned OpenGL ES context is callable from C++.
 int krosaOpenGLESContextSmokeTest(void);
 
+/// Initializes and shuts down librw GL3 using the current host-owned EAGL context.
+/// Returns 1 on success, or a negative stage-specific error code.
+int krosaLibrwGL3InitSmokeTest(int width, int height);
+
 #ifdef __cplusplus
 }
 #endif

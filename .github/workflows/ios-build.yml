@@ -30,7 +30,10 @@ jobs:
           git -C vendor/librw fetch --depth 1 origin 18532c2e13efbc1aa43f0b00b4459831f9414de0
           git -C vendor/librw checkout FETCH_HEAD
 
-      - name: Build librw core for iOS arm64
+      - name: Apply native iOS EAGL backend to librw
+        run: python3 scripts/patch-librw-eagl.py
+
+      - name: Build librw GL3 backend for iOS arm64
         run: |
           cmake -S vendor/librw -B build/librw-ios \
             -DCMAKE_SYSTEM_NAME=iOS \
@@ -38,7 +41,8 @@ jobs:
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=15.1 \
             -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=${{ github.workspace }}/build/librw-ios/lib \
-            -DLIBRW_PLATFORM=NULL \
+            -DLIBRW_PLATFORM=GL3 \
+            -DLIBRW_GL3_GFXLIB=EAGL \
             -DLIBRW_TOOLS=OFF \
             -DLIBRW_INSTALL=OFF
           cmake --build build/librw-ios --config Release --parallel 2
