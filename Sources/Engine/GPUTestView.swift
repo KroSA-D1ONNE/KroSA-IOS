@@ -21,7 +21,7 @@ struct GPUTestView: View {
                 GLES2TextureView(onContextValidated: { valid in
                     nativeGLStatus = valid ? "EAGL → C++: OK · GL CONTEXT ACTIVO" : "EAGL → C++: ERROR · SIN CONTEXTO"
                 }, onGL3Initialized: { result in
-                    librwGL3Status = result == 1 ? "LIBRW GL3 + EAGL: OK · SHADERS INICIALIZADOS" : "LIBRW GL3 + EAGL: ERROR · \\(result)"
+                    librwGL3Status = result == 1 ? "LIBRW GL3 + EAGL: OK · SHADERS INICIALIZADOS" : "LIBRW GL3 + EAGL: ERROR · \(result)"
                 })
                     .frame(maxWidth: .infinity)
                     .aspectRatio(1, contentMode: .fit)
