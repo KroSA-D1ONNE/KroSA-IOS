@@ -84,19 +84,18 @@ edit("src/engine.cpp", [
 ])
 
 
-# TEMPORARY ISOLATION TEST: keep librw's original vertex shader, attributes,
-# matrices and draw path, but replace only its fragment shader with solid green.
-# The framebuffer snapshot in defaultRenderCB is taken immediately after this
-# original librw draw and before the separate diagnostic bypass draw.
+# TEMPORARY ISOLATION TEST: preserve librw's vertex shader and draw path.
 p = ROOT / "src/gl/shaders/simple_fs_gl.inc"
 shader_source = p.read_text()
 shader_start = shader_source.index("const char *simple_frag_src =")
 shader_end = shader_source.index(";", shader_start) + 1
-shader_source = shader_source[:shader_start] + (
-    'const char *simple_frag_src =\n'
-    '"precision mediump float;\n"'
-    '"void main(void) { FRAGCOLOR(vec4(0.0, 1.0, 0.0, 1.0)); }\n";'
-) + shader_source[shader_end:]
+c_nl = chr(92) + "n"
+replacement = "\n".join([
+    "const char *simple_frag_src =",
+    '"precision mediump float;' + c_nl + '"',
+    '"void main(void) { FRAGCOLOR(vec4(0.0, 1.0, 0.0, 1.0)); }' + c_nl + '";',
+]) 
+shader_source = shader_source[:shader_start] + replacement + shader_source[shader_end:]
 p.write_text(shader_source)
 
 print("Applied iOS EAGL host patch to pinned librw source")
