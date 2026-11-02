@@ -95,21 +95,17 @@ edit("src/gl/gl3device.cpp", [
      "\tuniformStateDirty[RWGL_FOGCOLOR] = true;")
 ])
 
-# Keep texture sampling and the real fog color uniform; alpha test remains isolated.
+# Isolate the fog-color uniform itself. No texture, vertex color, or fog interpolation.
 shader_path = ROOT / "src/gl/shaders/simple_fs_gl.inc"
 shader = shader_path.read_text()
 begin = shader.find("const char *simple_frag_src =")
 if begin < 0:
     raise SystemExit("simple_fs_gl.inc: fragment shader declaration not found")
-finish = shader.find("\n;", begin)
+finish = shader.find("\\n;", begin)
 if finish < 0:
     raise SystemExit("simple_fs_gl.inc: fragment shader terminator not found")
 shader = shader[:begin] + '''const char *simple_frag_src =
-"uniform sampler2D tex0;\\n"
-"FSIN vec4 v_color;\\n"
-"FSIN vec2 v_tex0;\\n"
-"FSIN float v_fog;\\n"
-"void main(void) { vec4 color = v_color * texture(tex0, vec2(v_tex0.x, 1.0-v_tex0.y)); color.rgb = mix(u_fogColor.rgb, color.rgb, v_fog); FRAGCOLOR(color); }\\n"
+"void main(void) { FRAGCOLOR(u_fogColor); }\\n"
 ;''' + shader[finish + 2:]
 shader_path.write_text(shader)
 
