@@ -16,8 +16,10 @@ int krosaOpenGLESContextSmokeTest(void);
 /// Returns 1 on success, or a negative stage-specific error code.
 int krosaLibrwGL3InitSmokeTest(int width, int height);
 
-/// Builds and draws a triangle through librw Geometry + the GL3 object pipeline.
+/// Builds and draws a triangle through librw Geometry + the GL3 object pipeline,
+/// within the same Engine/EAGL lifecycle. Query init status after the call.
 int krosaLibrwGL3GeometrySmokeTest(int width, int height);
+int krosaGetLastGeometryInitStatus(void);
 
 /// Bit flags captured inside librw defaultRenderCB before/after glDrawElements.
 int krosaGetLastGeometryDrawFlags(void);
