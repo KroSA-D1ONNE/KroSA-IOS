@@ -93,9 +93,9 @@ shader_source = p.read_text()
 shader_start = shader_source.index("const char *simple_frag_src =")
 shader_end = shader_source.index(";", shader_start) + 1
 shader_source = shader_source[:shader_start] + (
-    'const char *simple_frag_src =\\n'
-    '"precision mediump float;\\n"'
-    '"void main(void) { FRAGCOLOR(vec4(0.0, 1.0, 0.0, 1.0)); }\\n";'
+    'const char *simple_frag_src =\n'
+    '"precision mediump float;\n"'
+    '"void main(void) { FRAGCOLOR(vec4(0.0, 1.0, 0.0, 1.0)); }\n";'
 ) + shader_source[shader_end:]
 p.write_text(shader_source)
 
