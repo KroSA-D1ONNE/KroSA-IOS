@@ -65,7 +65,7 @@ struct GPUTestView: View {
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundStyle(.green)
 
-                Text("El fondo cuadriculado valida OpenGL ES nativo. El triángulo con patrón verde lo dibuja librw GL3/EAGL usando una textura RGBA creada y subida mediante Raster::lock/unlock.")
+                Text("El fondo cuadriculado valida OpenGL ES nativo. El cubo 3D con patrón verde lo dibuja librw GL3/EAGL usando una textura RGBA, UV, cámara en perspectiva y depth test.")
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
@@ -116,7 +116,7 @@ struct GPUTestView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                Button("INICIAR LIBRW GL3 + GEOMETRÍA") {
+                Button("INICIAR LIBRW GL3 + CUBO 3D") {
                     showLibrwTest.toggle()
                 }
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
@@ -166,13 +166,13 @@ struct GPUTestView: View {
                             let fogG = krosaGetLastGeometryMetric(15)
                             let fogB = krosaGetLastGeometryMetric(16)
                             let fogA = krosaGetLastGeometryMetric(17)
-                            geometryStatus = (result == 1 ? "GEOMETRÍA LIBRW: OK · TRIÁNGULO DIBUJADO" : "GEOMETRÍA LIBRW: ERROR \(result)") + " · FLAGS \(flags) · PIX \(red),\(green),\(blue) · FBO \(framebuffer) · VP \(vx),\(vy),\(vw),\(vh) · IDX \(indices) · PRIM \(primitive) · VERT \(vertices) · MESH \(meshes) · ATTR \(attributes) · GREEN PX \(coloredPixels) · BOX \(minX),\(minY)-\(maxX),\(maxY) · BLUE PX \(bluePixels) · NONBLACK \(nonBlackPixels) · MAX G \(maxGreen) · PRE BLUE PX \(preBluePixels) · FOG U×1000 \(fogR),\(fogG),\(fogB),\(fogA)"
+                            geometryStatus = (result == 1 ? "GEOMETRÍA LIBRW: OK · CUBO 3D DIBUJADO" : "GEOMETRÍA LIBRW: ERROR \(result)") + " · FLAGS \(flags) · PIX \(red),\(green),\(blue) · FBO \(framebuffer) · VP \(vx),\(vy),\(vw),\(vh) · IDX \(indices) · PRIM \(primitive) · VERT \(vertices) · MESH \(meshes) · ATTR \(attributes) · GREEN PX \(coloredPixels) · BOX \(minX),\(minY)-\(maxX),\(maxY) · BLUE PX \(bluePixels) · NONBLACK \(nonBlackPixels) · MAX G \(maxGreen) · PRE BLUE PX \(preBluePixels) · FOG U×1000 \(fogR),\(fogG),\(fogB),\(fogA)"
                         }
                     )
                     .frame(maxWidth: .infinity)
                     .frame(height: 220)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                    Text("El fondo cuadriculado es GLKit; el triángulo con damero verde debe dibujarlo el pipeline GL3 de librw.")
+                    Text("El fondo cuadriculado es GLKit; el cubo con damero verde lo dibuja el pipeline GL3 de librw con cámara y profundidad.")
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundStyle(.green)
                         .multilineTextAlignment(.center)
