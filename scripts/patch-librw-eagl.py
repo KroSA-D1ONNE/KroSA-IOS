@@ -84,9 +84,18 @@ edit("src/engine.cpp", [
 ])
 
 
-# Isolate fragment inputs: preserve interpolated vertex color while bypassing
-# texture sampling, fog and alpha test. Replace the complete declaration by
-# boundaries instead of matching whitespace-sensitive upstream formatting.
+# librw initializes fog values in resetRenderState(), but upstream forgets
+# to mark them dirty. The registered uniforms therefore remain zero (black fog).
+edit("src/gl/gl3device.cpp", [
+    ("\tuniformState.fogColor = { 1.0f, 1.0f, 1.0f, 1.0f };",
+     "\tuniformState.fogColor = { 1.0f, 1.0f, 1.0f, 1.0f };\n"
+     "\tuniformStateDirty[RWGL_FOG] = true;\n"
+     "\tuniformStateDirty[RWGL_FOGSTART] = true;\n"
+     "\tuniformStateDirty[RWGL_FOGEND] = true;\n"
+     "\tuniformStateDirty[RWGL_FOGCOLOR] = true;")
+])
+
+# Keep texture sampling and the real fog color uniform; alpha test remains isolated.
 shader_path = ROOT / "src/gl/shaders/simple_fs_gl.inc"
 shader = shader_path.read_text()
 begin = shader.find("const char *simple_frag_src =")
@@ -100,7 +109,7 @@ shader = shader[:begin] + '''const char *simple_frag_src =
 "FSIN vec4 v_color;\\n"
 "FSIN vec2 v_tex0;\\n"
 "FSIN float v_fog;\\n"
-"void main(void) { vec4 color = v_color * texture(tex0, vec2(v_tex0.x, 1.0-v_tex0.y)); color.rgb = mix(vec3(1.0, 0.0, 1.0), color.rgb, v_fog); FRAGCOLOR(color); }\\n"
+"void main(void) { vec4 color = v_color * texture(tex0, vec2(v_tex0.x, 1.0-v_tex0.y)); color.rgb = mix(u_fogColor.rgb, color.rgb, v_fog); FRAGCOLOR(color); }\\n"
 ;''' + shader[finish + 2:]
 shader_path.write_text(shader)
 
