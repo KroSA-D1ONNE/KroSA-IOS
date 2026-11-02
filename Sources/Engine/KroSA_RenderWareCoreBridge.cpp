@@ -81,6 +81,7 @@ extern "C" int krosaLibrwGL3InitSmokeTest(int width, int height) {
 }
 
 extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
+    krosaLastGeometryInitStatus = -1;
     if (width <= 0 || height <= 0 ||
         rw::Engine::state != rw::Engine::Dead || rw::engine != nullptr)
         return -1;
@@ -93,22 +94,29 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
     if (hostFramebuffer == 0)
         return -7;
 
-    if (!rw::Engine::init())
+    if (!rw::Engine::init()) {
+        krosaLastGeometryInitStatus = -2;
         return -2;
+    }
 
     rw::EngineOpenParams params;
     params.width = width;
     params.height = height;
     params.windowtitle = "KroSA Geometry Test";
     if (!rw::Engine::open(&params)) {
+        krosaLastGeometryInitStatus = -3;
         rw::Engine::term();
         return -3;
     }
     if (!rw::Engine::start()) {
+        krosaLastGeometryInitStatus = -4;
         rw::Engine::close();
         rw::Engine::term();
         return -4;
     }
+    krosaLastGeometryInitStatus =
+        rw::Engine::state == rw::Engine::Started &&
+        rw::gl3::defaultShader != nullptr && glGetString(GL_VERSION) != nullptr ? 1 : -5;
 
     int result = -5;
     rw::Geometry *geometry = rw::Geometry::create(
