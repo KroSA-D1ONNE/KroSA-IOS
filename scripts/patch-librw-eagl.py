@@ -82,6 +82,8 @@ print("Applied iOS EAGL host patch to pinned librw source")
 edit("src/gl/gl3render.cpp", [
     ('#include "rwgl3impl.h"\n',
      '#include "rwgl3impl.h"\n\nextern "C" {\nstatic int krosaGL3DrawFlags = 0;\nvoid krosaResetGL3DrawDiagnostics(void) { krosaGL3DrawFlags = 0; }\nint krosaGetGL3DrawDiagnostics(void) { return krosaGL3DrawFlags; }\n}\n'),
+    ('void\ndefaultRenderCB(Atomic *atomic, InstanceDataHeader *header)\n{',
+     'void\ndefaultRenderCB(Atomic *atomic, InstanceDataHeader *header)\n{\n\tkrosaGL3DrawFlags |= 128;'),
     ('\t\tdrawInst(header, inst);',
      '\t\tGLint program = 0, arrayBuffer = 0, elementBuffer = 0;\n\t\tGLint positionEnabled = 0, positionBuffer = 0;\n\t\tglGetIntegerv(GL_CURRENT_PROGRAM, &program);\n\t\tglGetIntegerv(GL_ARRAY_BUFFER_BINDING, &arrayBuffer);\n\t\tglGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &elementBuffer);\n\t\tglGetVertexAttribiv(ATTRIB_POS, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &positionEnabled);\n\t\tglGetVertexAttribiv(ATTRIB_POS, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING, &positionBuffer);\n\t\tif(program) krosaGL3DrawFlags |= 1;\n\t\tif(arrayBuffer) krosaGL3DrawFlags |= 2;\n\t\tif(elementBuffer) krosaGL3DrawFlags |= 4;\n\t\tif(positionEnabled) krosaGL3DrawFlags |= 8;\n\t\tif(positionBuffer) krosaGL3DrawFlags |= 16;\n\t\tif(glGetError() == GL_NO_ERROR) krosaGL3DrawFlags |= 32;\n\t\tdrawInst(header, inst);\n\t\tif(glGetError() == GL_NO_ERROR) krosaGL3DrawFlags |= 64;')
 ])
