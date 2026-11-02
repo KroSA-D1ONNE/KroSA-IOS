@@ -96,8 +96,10 @@ finish = shader.find("\n;", begin)
 if finish < 0:
     raise SystemExit("simple_fs_gl.inc: fragment shader terminator not found")
 shader = shader[:begin] + '''const char *simple_frag_src =
+"uniform sampler2D tex0;\\n"
 "FSIN vec4 v_color;\\n"
-"void main(void) { FRAGCOLOR(v_color); }\\n"
+"FSIN vec2 v_tex0;\\n"
+"void main(void) { vec4 color = v_color * texture(tex0, vec2(v_tex0.x, 1.0-v_tex0.y)); FRAGCOLOR(color); }\\n"
 ;''' + shader[finish + 2:]
 shader_path.write_text(shader)
 
