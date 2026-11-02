@@ -1,0 +1,26 @@
+name: KroSA
+options:
+  bundleIdPrefix: com.krosa
+  deploymentTarget:
+    iOS: "15.1"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "15.1"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    GENERATE_INFOPLIST_FILE: YES
+    INFOPLIST_KEY_CFBundleDisplayName: KroSA
+    INFOPLIST_KEY_UILaunchScreen_Generation: YES
+    CODE_SIGN_STYLE: Automatic
+targets:
+  KroSA:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.krosa.ios
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        SWIFT_EMIT_LOC_STRINGS: YES
