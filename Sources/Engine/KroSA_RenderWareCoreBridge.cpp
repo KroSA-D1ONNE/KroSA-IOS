@@ -99,9 +99,7 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
     if (geometry) {
         material = rw::Material::create();
         if (material) material->color = {45, 235, 95, 255};
-        if (material && geometry->matList.appendMaterial(material) == 0) {
-            material->destroy();
-            material = nullptr;
+        if (material && geometry->matList.appendMaterial(material) >= 0) {
 
             rw::MorphTarget *target = &geometry->morphTargets[0];
             target->vertices[0].set(-0.62f, -0.58f, 0.0f);
