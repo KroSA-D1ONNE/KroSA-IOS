@@ -8,6 +8,7 @@ struct GPUTestView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var renderWareStatus = "CORE SIN PROBAR"
     @State private var nativeGLStatus = "PUENTE C++ SIN PROBAR"
+    @State private var librwGL3Status = "LIBRW GL3 / EAGL SIN PROBAR"
 
     var body: some View {
         ZStack {
@@ -19,6 +20,8 @@ struct GPUTestView: View {
 
                 GLES2TextureView(onContextValidated: { valid in
                     nativeGLStatus = valid ? "EAGL → C++: OK · GL CONTEXT ACTIVO" : "EAGL → C++: ERROR · SIN CONTEXTO"
+                }, onGL3Initialized: { result in
+                    librwGL3Status = result == 1 ? "LIBRW GL3 + EAGL: OK · SHADERS INICIALIZADOS" : "LIBRW GL3 + EAGL: ERROR · \\(result)"
                 })
                     .frame(maxWidth: .infinity)
                     .aspectRatio(1, contentMode: .fit)
@@ -38,6 +41,10 @@ struct GPUTestView: View {
                 Text(nativeGLStatus)
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundStyle(nativeGLStatus.contains("OK") ? .green : .orange)
+
+                Text(librwGL3Status)
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(librwGL3Status.contains("OK") ? .green : .orange)
 
                 Button {
                     let result = krosaRenderWareCoreSmokeTest()
@@ -74,11 +81,13 @@ struct GPUTestView: View {
 
 private struct GLES2TextureView: UIViewRepresentable {
     let onContextValidated: (Bool) -> Void
+    let onGL3Initialized: (Int32) -> Void
 
     func makeCoordinator() -> Renderer { Renderer() }
 
     func makeUIView(context: Context) -> GLKView {
         context.coordinator.onContextValidated = onContextValidated
+        context.coordinator.onGL3Initialized = onGL3Initialized
         let view = GLKView(frame: .zero, context: context.coordinator.glContext)
         view.delegate = context.coordinator
         view.drawableColorFormat = .RGBA8888
@@ -98,7 +107,9 @@ private struct GLES2TextureView: UIViewRepresentable {
         private var textureID: GLuint = 0
         private let effect = GLKBaseEffect()
         var onContextValidated: ((Bool) -> Void)?
+        var onGL3Initialized: ((Int32) -> Void)?
         private var didValidateNativeContext = false
+        private var didRunLibrwGL3Test = false
 
         override init() {
             glContext = EAGLContext(api: .openGLES2)!
@@ -151,6 +162,11 @@ private struct GLES2TextureView: UIViewRepresentable {
             if !didValidateNativeContext {
                 didValidateNativeContext = true
                 onContextValidated?(krosaOpenGLESContextSmokeTest() == 1)
+            }
+            if !didRunLibrwGL3Test {
+                didRunLibrwGL3Test = true
+                let result = krosaLibrwGL3InitSmokeTest(Int32(view.drawableWidth), Int32(view.drawableHeight))
+                onGL3Initialized?(result)
             }
 
             glViewport(0, 0, GLsizei(view.drawableWidth), GLsizei(view.drawableHeight))
