@@ -84,6 +84,24 @@ edit("src/engine.cpp", [
 ])
 
 
+# OpenGL ES 2.0 requires GL_RGBA (not GL_RGBA8) as the texture internalformat.
+# Upstream's GL3 raster path overrides C8888 with GL_RGBA8 even on GLES2,
+# making glTexImage2D fail and leaving sampled textures black.
+p = ROOT / "src/gl/gl3raster.cpp"
+raster_source = p.read_text()
+marker = "// glReadPixels only supports GL_RGBA"
+pos = raster_source.find(marker)
+if pos < 0:
+    raise SystemExit("gl3raster.cpp: GLES texture format block not found")
+format_pos = raster_source.find("natras->internalFormat = GL_RGBA8;", pos)
+if format_pos < 0:
+    raise SystemExit("gl3raster.cpp: GLES internalFormat assignment not found")
+raster_source = raster_source[:format_pos] + raster_source[format_pos:].replace(
+    "natras->internalFormat = GL_RGBA8;",
+    "natras->internalFormat = GL_RGBA;", 1
+)
+p.write_text(raster_source)
+
 # librw initializes fog values in resetRenderState(), but upstream forgets
 # to mark them dirty. The registered uniforms therefore remain zero (black fog).
 edit("src/gl/gl3device.cpp", [
