@@ -6,216 +6,103 @@ import OpenGLES
 /// UV coordinates and GLKBaseEffect's GLES shader pipeline.
 struct GPUTestView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var renderWareStatus = "CORE SIN PROBAR"
     @State private var nativeGLStatus = "PUENTE C++ SIN PROBAR"
     @State private var librwGL3Status = "LIBRW GL3 / EAGL SIN PROBAR"
     @State private var geometryStatus = "GEOMETRÍA LIBRW SIN PROBAR"
-    @State private var showGLKViewTest = false
-    @State private var showTriangleTest = false
     @State private var showLibrwTest = false
 
     var body: some View {
         ZStack {
             Color(red: 0.035, green: 0.045, blue: 0.04).ignoresSafeArea()
-            VStack(spacing: 18) {
-                Text("KroSA · GRAPHICS TEST")
-                    .font(.system(size: 15, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.white)
-
-                VStack(spacing: 14) {
-                    Image(systemName: "cpu")
-                        .font(.system(size: 42, weight: .light))
+            VStack(spacing: 16) {
+                HStack {
+                    Text("KroSA")
+                        .font(.system(size: 19, weight: .bold, design: .rounded))
+                    Spacer()
+                    Text("RENDERWARE · EAGL")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
                         .foregroundStyle(.green)
-                    Text("DIAGNÓSTICO EAGL POR ETAPAS")
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.white)
-                    Text("Primero se comprueba únicamente la creación del contexto EAGL. Todavía no se crea GLKView ni se llama a librw.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.6))
-                        .multilineTextAlignment(.center)
-                    Button("PROBAR CONTEXTO EAGL") {
-                        let context = EAGLContext(api: .openGLES2)
-                        guard let context, EAGLContext.setCurrent(context) else {
-                            nativeGLStatus = "EAGL CONTEXT: ERROR · NO SE PUDO CREAR/ACTIVAR"
-                            return
-                        }
-                        let version = glGetString(GLenum(GL_VERSION))
-                        if version != nil {
-                            nativeGLStatus = "EAGL CONTEXT: OK · OPENGL ES ACTIVO"
-                        } else {
-                            nativeGLStatus = "EAGL CONTEXT: ERROR · GL_VERSION NULO"
-                        }
-                        EAGLContext.setCurrent(nil)
-                    }
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.black)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 12)
-                    .background(Color.green)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
-                .frame(maxWidth: .infinity)
-                .aspectRatio(1, contentMode: .fit)
-                .padding(18)
-                .background(Color.black)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.green.opacity(0.35), lineWidth: 1))
+                .foregroundStyle(.white)
 
-                Text("OpenGL ES 2.0 · EAGLContext · GL_TEXTURE_2D")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.green)
-
-                Text("El fondo cuadriculado valida OpenGL ES nativo. El cubo 3D con patrón verde lo dibuja librw GL3/EAGL usando una textura RGBA, UV, cámara en perspectiva y depth test.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.white.opacity(0.6))
-                    .multilineTextAlignment(.center)
-
-                Text(nativeGLStatus)
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(nativeGLStatus.contains("OK") ? .green : .orange)
-
-                Button("INICIAR PRUEBA GLKVIEW") {
-                    showGLKViewTest.toggle()
-                }
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .foregroundStyle(.black)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 12)
-                .background(Color.green)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                if showGLKViewTest {
-                    GLKClearTestView()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 190)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    Text("Si ves el panel verde, GLKView creó el framebuffer y ejecutó glClear.")
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundStyle(.green)
-                        .multilineTextAlignment(.center)
-                }
-
-                Button("INICIAR PRUEBA TRIÁNGULO GLES2") {
-                    showTriangleTest.toggle()
-                }
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .foregroundStyle(.black)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 12)
-                .background(Color.green)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                if showTriangleTest {
-                    GLESTriangleTestView()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 190)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    Text("Triángulo amarillo = compilación de shaders, enlace del programa y glDrawArrays GLES2.")
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundStyle(.green)
-                        .multilineTextAlignment(.center)
-                }
-
-                Button("INICIAR LIBRW GL3 + CUBO 3D") {
-                    showLibrwTest.toggle()
-                }
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .foregroundStyle(.black)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 12)
-                .background(Color.green)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                Text("PRUEBA GRÁFICA")
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.7))
 
                 if showLibrwTest {
                     GLES2TextureView(
                         onContextValidated: { valid in
-                            nativeGLStatus = valid
-                                ? "EAGL CONTEXT: OK · LIBRW PUEDE USAR EL CONTEXTO"
-                                : "EAGL CONTEXT: ERROR · LIBRW"
+                            nativeGLStatus = valid ? "EAGL: OK" : "EAGL: ERROR"
                         },
                         onGL3Initialized: { result in
-                            librwGL3Status = result == 1
-                                ? "LIBRW GL3 / EAGL: OK · ENGINE + SHADERS"
-                                : "LIBRW GL3 / EAGL: ERROR · ETAPA \(result)"
+                            librwGL3Status = result == 1 ? "LIBRW GL3: OK" : "LIBRW GL3: ERROR · ETAPA \(result)"
                         },
                         onGeometryDrawn: { result in
                             let flags = krosaGetLastGeometryDrawFlags()
-                            let red = krosaGetLastGeometryPixel(0)
-                            let green = krosaGetLastGeometryPixel(1)
-                            let blue = krosaGetLastGeometryPixel(2)
-                            let framebuffer = krosaGetLastGeometryFramebuffer()
-                            let vx = krosaGetLastGeometryViewport(0)
-                            let vy = krosaGetLastGeometryViewport(1)
-                            let vw = krosaGetLastGeometryViewport(2)
-                            let vh = krosaGetLastGeometryViewport(3)
-                            let indices = krosaGetLastGeometryMetric(0)
-                            let primitive = krosaGetLastGeometryMetric(1)
-                            let vertices = krosaGetLastGeometryMetric(2)
-                            let meshes = krosaGetLastGeometryMetric(3)
-                            let attributes = krosaGetLastGeometryMetric(4)
-                            let coloredPixels = krosaGetLastGeometryMetric(5)
-                            let minX = krosaGetLastGeometryMetric(6)
-                            let minY = krosaGetLastGeometryMetric(7)
-                            let maxX = krosaGetLastGeometryMetric(8)
-                            let maxY = krosaGetLastGeometryMetric(9)
-                            let bluePixels = krosaGetLastGeometryMetric(10)
-                            let nonBlackPixels = krosaGetLastGeometryMetric(11)
-                            let maxGreen = krosaGetLastGeometryMetric(12)
-                            let preBluePixels = krosaGetLastGeometryMetric(13)
-                            let fogR = krosaGetLastGeometryMetric(14)
-                            let fogG = krosaGetLastGeometryMetric(15)
-                            let fogB = krosaGetLastGeometryMetric(16)
-                            let fogA = krosaGetLastGeometryMetric(17)
-                            geometryStatus = (result == 1 ? "GEOMETRÍA LIBRW: OK · CUBO 3D DIBUJADO" : "GEOMETRÍA LIBRW: ERROR \(result)") + " · FLAGS \(flags) · PIX \(red),\(green),\(blue) · FBO \(framebuffer) · VP \(vx),\(vy),\(vw),\(vh) · IDX \(indices) · PRIM \(primitive) · VERT \(vertices) · MESH \(meshes) · ATTR \(attributes) · GREEN PX \(coloredPixels) · BOX \(minX),\(minY)-\(maxX),\(maxY) · BLUE PX \(bluePixels) · NONBLACK \(nonBlackPixels) · MAX G \(maxGreen) · PRE BLUE PX \(preBluePixels) · FOG U×1000 \(fogR),\(fogG),\(fogB),\(fogA)"
+                            let pixel = "\(krosaGetLastGeometryPixel(0)),\(krosaGetLastGeometryPixel(1)),\(krosaGetLastGeometryPixel(2))"
+                            geometryStatus = (result == 1 ? "GEOMETRÍA: OK · CUBO 3D" : "GEOMETRÍA: ERROR \(result)") +
+                                " · FLAGS \(flags) · PIX \(pixel)"
                         }
                     )
                     .frame(maxWidth: .infinity)
-                    .frame(height: 220)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    Text("El fondo cuadriculado es GLKit; el cubo con damero verde lo dibuja el pipeline GL3 de librw con cámara y profundidad.")
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .frame(height: 300)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.green.opacity(0.35), lineWidth: 1))
+                    Text("Arrastrá para rotar · Pellizcá para acercar")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.55))
+                } else {
+                    Spacer(minLength: 24)
+                    Image(systemName: "cube.transparent")
+                        .font(.system(size: 72, weight: .ultraLight))
                         .foregroundStyle(.green)
-                        .multilineTextAlignment(.center)
+                    Text("Motor gráfico nativo")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Text("RenderWare · librw GL3 · OpenGL ES")
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.55))
+                    Spacer(minLength: 24)
                 }
 
-                Text(librwGL3Status)
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(librwGL3Status.contains("OK") ? .green : .orange)
-
-                Text(geometryStatus)
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(geometryStatus.contains("OK") ? .green : .orange)
+                VStack(alignment: .leading, spacing: 7) {
+                    statusLine(nativeGLStatus)
+                    statusLine(librwGL3Status)
+                    statusLine(geometryStatus)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(13)
+                .background(Color.white.opacity(0.055))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
 
                 Button {
-                    let result = krosaRenderWareCoreSmokeTest()
-                    renderWareStatus = result == 1
-                        ? "LIBRW CORE: OK · INIT / TERM"
-                        : "LIBRW CORE: ERROR · \(result)"
+                    showLibrwTest.toggle()
                 } label: {
-                    Text("PROBAR LIBRW CORE")
+                    Text(showLibrwTest ? "DETENER PRUEBA" : "INICIAR PRUEBA")
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color(red: 0.35, green: 0.95, blue: 0.48))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .padding(.vertical, 15)
+                        .background(Color.green)
+                        .clipShape(RoundedRectangle(cornerRadius: 11))
                 }
 
-                Text(renderWareStatus)
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(renderWareStatus.contains("OK") ? .green : .orange)
-
                 Button("VOLVER") { dismiss() }
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.8))
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 13)
-                    .background(Color.white.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.65))
+                    .padding(.vertical, 8)
             }
-            .padding(24)
+            .padding(20)
         }
         .preferredColorScheme(.dark)
+    }
+
+    private func statusLine(_ value: String) -> some View {
+        Text(value)
+            .font(.system(size: 10, weight: .medium, design: .monospaced))
+            .foregroundStyle(value.contains("OK") ? .green : .orange)
+            .lineLimit(2)
+            .minimumScaleFactor(0.8)
     }
 }
 
@@ -291,6 +178,16 @@ private struct GLES2TextureView: UIViewRepresentable {
             view.setNeedsDisplay()
         }
         return view
+        #endif
+    }
+
+    static func dismantleUIView(_ uiView: UIView, coordinator: Renderer) {
+        #if !targetEnvironment(simulator)
+        if let glContext = coordinator.glContext {
+            _ = EAGLContext.setCurrent(glContext)
+            krosaLibrwGL3Shutdown()
+            EAGLContext.setCurrent(nil)
+        }
         #endif
     }
 
