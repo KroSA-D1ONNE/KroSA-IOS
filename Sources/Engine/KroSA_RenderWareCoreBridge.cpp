@@ -110,7 +110,7 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
 
     int result = -5;
     rw::Geometry *geometry = rw::Geometry::create(
-        3, 1, rw::Geometry::POSITIONS | rw::Geometry::PRELIT | rw::Geometry::MODULATE);
+        3, 1, rw::Geometry::POSITIONS | rw::Geometry::PRELIT);
     rw::Material *material = nullptr;
     rw::Frame *frame = nullptr;
     rw::Atomic *atomic = nullptr;
