@@ -197,8 +197,13 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
                 glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &elementBuffer);
                 const GLenum drawError = glGetError();
 
+                // Read the center of GLKView's drawable in backing pixels.
+                // width/height are logical view dimensions on iOS and can be
+                // smaller than the Retina framebuffer dimensions.
+                const GLint sampleX = hostViewport[0] + hostViewport[2] / 2;
+                const GLint sampleY = hostViewport[1] + hostViewport[3] / 2;
                 GLubyte centerPixel[4] = {0, 0, 0, 0};
-                glReadPixels(width / 2, height / 2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, centerPixel);
+                glReadPixels(sampleX, sampleY, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, centerPixel);
                 const GLenum readError = glGetError();
                 const bool greenPixel = centerPixel[1] > centerPixel[0] + 35 && centerPixel[1] > centerPixel[2] + 20;
 
