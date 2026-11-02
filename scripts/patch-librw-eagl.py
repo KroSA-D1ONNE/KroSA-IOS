@@ -173,35 +173,7 @@ int krosaGetGL3DrawMetric(int i) { switch(i){case 0:return krosaGL3IndexCount;ca
 \t\t\t\t}
 \t\t\t}
 \t\t}
-\t\t// Diagnostic-only bypass: redraw the same indexed VBO with a minimal GLES2 shader.
-\t\t{
-\t\t\tconst char *diagVS = "attribute vec3 in_pos; void main(){ gl_Position = vec4(in_pos, 1.0); }";
-\t\t\tconst char *diagFS = "precision mediump float; void main(){ gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0); }";
-\t\t\tGLuint vs = glCreateShader(GL_VERTEX_SHADER), fs = glCreateShader(GL_FRAGMENT_SHADER), diagProgram = 0;
-\t\t\tGLint ok = 0;
-\t\t\tglShaderSource(vs, 1, &diagVS, NULL); glCompileShader(vs); glGetShaderiv(vs, GL_COMPILE_STATUS, &ok);
-\t\t\tif(ok){
-\t\t\t\tglShaderSource(fs, 1, &diagFS, NULL); glCompileShader(fs); glGetShaderiv(fs, GL_COMPILE_STATUS, &ok);
-\t\t\t}
-\t\t\tif(ok){
-\t\t\t\tdiagProgram = glCreateProgram(); glAttachShader(diagProgram, vs); glAttachShader(diagProgram, fs);
-\t\t\t\tglBindAttribLocation(diagProgram, ATTRIB_POS, "in_pos"); glLinkProgram(diagProgram);
-\t\t\t\tglGetProgramiv(diagProgram, GL_LINK_STATUS, &ok);
-\t\t\t}
-\t\t\tif(ok && diagProgram){
-\t\t\t\tGLint previousProgram = 0; glGetIntegerv(GL_CURRENT_PROGRAM, &previousProgram);
-\t\t\t\tglUseProgram(diagProgram);
-\t\t\t\tglDisable(GL_SCISSOR_TEST); glDisable(GL_DEPTH_TEST); glDisable(GL_CULL_FACE);
-\t\t\t\tglDisable(GL_BLEND); glDisable(GL_STENCIL_TEST);
-\t\t\t\tglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-\t\t\t\tglDrawElements(header->primType, inst->numIndex, GL_UNSIGNED_SHORT, (void*)(uintptr)inst->offset);
-\t\t\t\tglUseProgram((GLuint)previousProgram);
-\t\t\t}
-\t\t\tif(diagProgram) glDeleteProgram(diagProgram);
-\t\t\tif(vs) glDeleteShader(vs);
-\t\t\tif(fs) glDeleteShader(fs);
-\t\t}
-\t\tif(glGetError() == GL_NO_ERROR) krosaGL3DrawFlags |= 64;
+		// Diagnostic bypass disabled: only librw's own shader may draw.
 \t\tglGetIntegerv(GL_FRAMEBUFFER_BINDING, &krosaGL3Framebuffer);
 \t\tglGetIntegerv(GL_VIEWPORT, krosaGL3Viewport);
 \t\tGLubyte pixel[4] = {0,0,0,0};
