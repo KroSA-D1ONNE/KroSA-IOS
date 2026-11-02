@@ -207,3 +207,17 @@ int krosaGetGL3DrawMetric(int i) { switch(i){case 0:return krosaGL3IndexCount;ca
 \t\t\t}
 \t\t}""")
 ])
+
+
+# Read back the actual GPU-side fog uniform after librw flushes it.
+# Values are exposed as milli-units through the existing geometry metric API.
+edit("src/gl/gl3render.cpp", [
+    ('static int krosaGL3ColoredPixels=-1, krosaGL3MinX=-1, krosaGL3MinY=-1, krosaGL3MaxX=-1, krosaGL3MaxY=-1, krosaGL3BluePixels=-1, krosaGL3NonBlackPixels=-1, krosaGL3MaxGreen=-1, krosaGL3PreBluePixels=-1;',
+     'static int krosaGL3ColoredPixels=-1, krosaGL3MinX=-1, krosaGL3MinY=-1, krosaGL3MaxX=-1, krosaGL3MaxY=-1, krosaGL3BluePixels=-1, krosaGL3NonBlackPixels=-1, krosaGL3MaxGreen=-1, krosaGL3PreBluePixels=-1;\nstatic GLfloat krosaGL3FogUniform[4] = {-1.0f,-1.0f,-1.0f,-1.0f};'),
+    ('krosaGL3MaxGreen=krosaGL3PreBluePixels=-1; }',
+     'krosaGL3MaxGreen=krosaGL3PreBluePixels=-1; krosaGL3FogUniform[0]=krosaGL3FogUniform[1]=krosaGL3FogUniform[2]=krosaGL3FogUniform[3]=-1.0f; }'),
+    ('case 13:return krosaGL3PreBluePixels;default:return -1;',
+     'case 13:return krosaGL3PreBluePixels;case 14:return (int)(krosaGL3FogUniform[0]*1000.0f);case 15:return (int)(krosaGL3FogUniform[1]*1000.0f);case 16:return (int)(krosaGL3FogUniform[2]*1000.0f);case 17:return (int)(krosaGL3FogUniform[3]*1000.0f);default:return -1;'),
+    ("\t\tdrawInst(header, inst);\n\t\t// Snapshot framebuffer BEFORE the diagnostic bypass to measure librw's own shader.",
+     "\t\tdrawInst(header, inst);\n\t\tif(program){ GLint fogLocation = glGetUniformLocation((GLuint)program, \"u_fogColor\"); if(fogLocation >= 0) glGetUniformfv((GLuint)program, fogLocation, krosaGL3FogUniform); }\n\t\t// Snapshot framebuffer BEFORE the diagnostic bypass to measure librw's own shader.")
+])
