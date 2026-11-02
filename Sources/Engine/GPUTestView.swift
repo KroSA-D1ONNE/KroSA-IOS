@@ -6,9 +6,9 @@ import OpenGLES
 /// UV coordinates and GLKBaseEffect's GLES shader pipeline.
 struct GPUTestView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var nativeGLStatus = "PUENTE C++ SIN PROBAR"
-    @State private var librwGL3Status = "LIBRW GL3 / EAGL SIN PROBAR"
-    @State private var geometryStatus = "GEOMETRÍA LIBRW SIN PROBAR"
+    @State private var nativeGLStatus = "EAGL CLEAR AISLADO"
+    @State private var librwGL3Status = "LIBRW GL3: NO EJECUTADO"
+    @State private var geometryStatus = "GEOMETRÍA: NO EJECUTADA"
     @State private var showLibrwTest = false
 
     var body: some View {
@@ -30,26 +30,13 @@ struct GPUTestView: View {
                     .foregroundStyle(.white.opacity(0.7))
 
                 if showLibrwTest {
-                    GLES2TextureView(
-                        onContextValidated: { valid in
-                            nativeGLStatus = valid ? "EAGL: OK" : "EAGL: ERROR"
-                        },
-                        onGL3Initialized: { result in
-                            librwGL3Status = result == 1 ? "LIBRW GL3: OK" : "LIBRW GL3: ERROR · ETAPA \(result)"
-                        },
-                        onGeometryDrawn: { result in
-                            let flags = krosaGetLastGeometryDrawFlags()
-                            let pixel = "\(krosaGetLastGeometryPixel(0)),\(krosaGetLastGeometryPixel(1)),\(krosaGetLastGeometryPixel(2))"
-                            geometryStatus = (result == 1 ? "GEOMETRÍA: OK · CUBO 3D" : "GEOMETRÍA: ERROR \(result)") +
-                                " · FLAGS \(flags) · PIX \(pixel)"
-                        }
-                    )
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 300)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.green.opacity(0.35), lineWidth: 1))
-                    Text("Arrastrá para rotar · Pellizcá para acercar")
-                        .font(.system(size: 11, weight: .medium))
+                    GLKClearTestView()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 300)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.green.opacity(0.35), lineWidth: 1))
+                    Text("PRUEBA AISLADA · SIN LIBRW NI SHADERS")
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
                         .foregroundStyle(.white.opacity(0.55))
                 } else {
                     Spacer(minLength: 24)
@@ -78,7 +65,7 @@ struct GPUTestView: View {
                 Button {
                     showLibrwTest.toggle()
                 } label: {
-                    Text(showLibrwTest ? "DETENER PRUEBA" : "INICIAR PRUEBA")
+                    Text(showLibrwTest ? "DETENER PRUEBA EAGL" : "PROBAR EAGL AISLADO")
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
