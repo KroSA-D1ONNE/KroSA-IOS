@@ -158,9 +158,12 @@ struct GPUTestView: View {
                             let minY = krosaGetLastGeometryMetric(7)
                             let maxX = krosaGetLastGeometryMetric(8)
                             let maxY = krosaGetLastGeometryMetric(9)
+                            let bluePixels = krosaGetLastGeometryMetric(10)
+                            let nonBlackPixels = krosaGetLastGeometryMetric(11)
+                            let maxGreen = krosaGetLastGeometryMetric(12)
                             geometryStatus = result == 1
                                 ? "GEOMETRÍA LIBRW: OK · TRIÁNGULO DIBUJADO"
-                                : "GEOMETRÍA LIBRW: ERROR \(result) · FLAGS \(flags) · PIX \(red),\(green),\(blue) · FBO \(framebuffer) · VP \(vx),\(vy),\(vw),\(vh) · IDX \(indices) · PRIM \(primitive) · VERT \(vertices) · MESH \(meshes) · ATTR \(attributes) · GREEN PX \(coloredPixels) · BOX \(minX),\(minY)-\(maxX),\(maxY)"
+                                : "GEOMETRÍA LIBRW: ERROR \(result) · FLAGS \(flags) · PIX \(red),\(green),\(blue) · FBO \(framebuffer) · VP \(vx),\(vy),\(vw),\(vh) · IDX \(indices) · PRIM \(primitive) · VERT \(vertices) · MESH \(meshes) · ATTR \(attributes) · GREEN PX \(coloredPixels) · BOX \(minX),\(minY)-\(maxX),\(maxY) · BLUE PX \(bluePixels) · NONBLACK \(nonBlackPixels) · MAX G \(maxGreen)"
                         }
                     )
                     .frame(maxWidth: .infinity)
