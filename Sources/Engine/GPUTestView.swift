@@ -75,7 +75,6 @@ private struct GLES2TextureView: UIViewRepresentable {
             createTestTexture()
             effect.texture2d0.enabled = GLboolean(GL_TRUE)
             effect.texture2d0.name = textureID
-            effect.texture2d0.target = .texture2D
             effect.texture2d0.envMode = .modulate
             effect.transform.projectionMatrix = GLKMatrix4MakeOrtho(-1, 1, -1, 1, -1, 1)
             effect.transform.modelviewMatrix = GLKMatrix4Identity
