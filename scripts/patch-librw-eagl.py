@@ -88,9 +88,12 @@ edit("src/engine.cpp", [
 p = ROOT / "src/gl/shaders/simple_fs_gl.inc"
 shader_source = p.read_text()
 shader_start = shader_source.index("const char *simple_frag_src =")
-shader_end = shader_source.rfind('";') + 2
-if shader_end <= shader_start:
-    raise RuntimeError("Could not find end of simple fragment shader declaration")
+# Upstream terminates this adjacent-string C declaration with a standalone
+# semicolon on its own line (not a trailing `";`).
+terminator = shader_source.find("\\n;", shader_start)
+if terminator < 0:
+    raise RuntimeError("Could not find standalone terminator of simple fragment shader declaration")
+shader_end = terminator + 2
 c_nl = chr(92) + "n"
 replacement = "\n".join([
     "const char *simple_frag_src =",
