@@ -22,6 +22,6 @@ final class KroSAGPUTests: XCTestCase {
         ).firstMatch
         XCTAssertTrue(geometryStatus.waitForExistence(timeout: 30),
                       "El renderer no informó el resultado de geometría")
-        XCTAssertTrue(app.exists, "La aplicación se cerró durante el test GPU")
+        XCTAssertEqual(app.state, .runningForeground, "La aplicación se cerró durante el test GPU")
     }
 }
