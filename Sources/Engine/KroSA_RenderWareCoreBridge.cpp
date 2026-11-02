@@ -145,9 +145,11 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
             target->vertices[0].set(-0.62f, -0.58f, 0.0f);
             target->vertices[1].set( 0.62f, -0.58f, 0.0f);
             target->vertices[2].set( 0.00f,  0.66f, 0.0f);
+            // Flat-color probe: identical color at all vertices eliminates
+            // intentional smooth color interpolation from the diagnostic.
             geometry->colors[0] = {45, 235, 95, 255};
-            geometry->colors[1] = {20, 150, 65, 255};
-            geometry->colors[2] = {110, 255, 145, 255};
+            geometry->colors[1] = {45, 235, 95, 255};
+            geometry->colors[2] = {45, 235, 95, 255};
             geometry->triangles[0].v[0] = 0;
             geometry->triangles[0].v[1] = 1;
             geometry->triangles[0].v[2] = 2;
