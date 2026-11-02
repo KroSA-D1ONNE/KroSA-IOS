@@ -1,5 +1,6 @@
 #include "KroSA_RenderWareCoreBridge.h"
 #include <dlfcn.h>
+#include <cmath>
 
 #define RW_GL3
 #define LIBRW_EAGL
@@ -160,8 +161,9 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
             texture = nullptr;
         }
     }
+    // A six-sided, UV-mapped cube exercises real 3D transforms and depth.
     rw::Geometry *geometry = rw::Geometry::create(
-        3, 1, rw::Geometry::POSITIONS | rw::Geometry::PRELIT | rw::Geometry::TEXTURED);
+        24, 12, rw::Geometry::POSITIONS | rw::Geometry::PRELIT | rw::Geometry::TEXTURED);
     rw::Material *material = nullptr;
     rw::Frame *frame = nullptr;
     rw::Atomic *atomic = nullptr;
@@ -180,22 +182,36 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
         if (material && material->texture && geometry->matList.appendMaterial(material) >= 0) {
 
             rw::MorphTarget *target = &geometry->morphTargets[0];
-            target->vertices[0].set(-0.62f, -0.58f, 0.0f);
-            target->vertices[1].set( 0.62f, -0.58f, 0.0f);
-            target->vertices[2].set( 0.00f,  0.66f, 0.0f);
-            // Flat-color probe: identical color at all vertices eliminates
-            // intentional smooth color interpolation from the diagnostic.
-            // White vertex color lets the texture's green checker reach the fragment unchanged.
-            geometry->colors[0] = {255, 255, 255, 255};
-            geometry->colors[1] = {255, 255, 255, 255};
-            geometry->colors[2] = {255, 255, 255, 255};
-            geometry->texCoords[0][0] = {0.0f, 0.0f};
-            geometry->texCoords[0][1] = {1.0f, 0.0f};
-            geometry->texCoords[0][2] = {0.5f, 1.0f};
-            geometry->triangles[0].v[0] = 0;
-            geometry->triangles[0].v[1] = 1;
-            geometry->triangles[0].v[2] = 2;
-            geometry->triangles[0].matId = 0;
+            const float facePositions[6][4][3] = {
+                {{-0.72f,-0.72f, 0.72f},{ 0.72f,-0.72f, 0.72f},{ 0.72f, 0.72f, 0.72f},{-0.72f, 0.72f, 0.72f}},
+                {{ 0.72f,-0.72f,-0.72f},{-0.72f,-0.72f,-0.72f},{-0.72f, 0.72f,-0.72f},{ 0.72f, 0.72f,-0.72f}},
+                {{ 0.72f,-0.72f, 0.72f},{ 0.72f,-0.72f,-0.72f},{ 0.72f, 0.72f,-0.72f},{ 0.72f, 0.72f, 0.72f}},
+                {{-0.72f,-0.72f,-0.72f},{-0.72f,-0.72f, 0.72f},{-0.72f, 0.72f, 0.72f},{-0.72f, 0.72f,-0.72f}},
+                {{-0.72f, 0.72f, 0.72f},{ 0.72f, 0.72f, 0.72f},{ 0.72f, 0.72f,-0.72f},{-0.72f, 0.72f,-0.72f}},
+                {{-0.72f,-0.72f,-0.72f},{ 0.72f,-0.72f,-0.72f},{ 0.72f,-0.72f, 0.72f},{-0.72f,-0.72f, 0.72f}}
+            };
+            const float faceUVs[4][2] = {{0.0f,0.0f},{1.0f,0.0f},{1.0f,1.0f},{0.0f,1.0f}};
+            for (int face = 0; face < 6; ++face) {
+                const int base = face * 4;
+                for (int corner = 0; corner < 4; ++corner) {
+                    target->vertices[base + corner].set(
+                        facePositions[face][corner][0],
+                        facePositions[face][corner][1],
+                        facePositions[face][corner][2]);
+                    geometry->colors[base + corner] = {255, 255, 255, 255};
+                    geometry->texCoords[0][base + corner] = {
+                        faceUVs[corner][0], faceUVs[corner][1]};
+                }
+                const int tri = face * 2;
+                geometry->triangles[tri + 0].v[0] = base + 0;
+                geometry->triangles[tri + 0].v[1] = base + 1;
+                geometry->triangles[tri + 0].v[2] = base + 2;
+                geometry->triangles[tri + 0].matId = 0;
+                geometry->triangles[tri + 1].v[0] = base + 0;
+                geometry->triangles[tri + 1].v[1] = base + 2;
+                geometry->triangles[tri + 1].v[2] = base + 3;
+                geometry->triangles[tri + 1].matId = 0;
+            }
             geometry->calculateBoundingSphere();
             geometry->unlock();
 
@@ -209,12 +225,29 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
                 geometry = nullptr;
                 atomic->pipeline = pipeline;
 
-                const float identity[16] = {
-                    1, 0, 0, 0, 0, 1, 0, 0,
-                    0, 0, 1, 0, 0, 0, 0, 1
+                const float aspect = float(width) / float(height);
+                const float f = 1.0f / 0.57735026919f; // 60-degree vertical FOV
+                const float nearPlane = 0.1f;
+                const float farPlane = 100.0f;
+                const float projection[16] = {
+                    f / aspect, 0, 0, 0,
+                    0, f, 0, 0,
+                    0, 0, (farPlane + nearPlane) / (nearPlane - farPlane), -1,
+                    0, 0, (2.0f * farPlane * nearPlane) / (nearPlane - farPlane), 0
                 };
-                rw::gl3::setProjectionMatrix(const_cast<float*>(identity));
-                rw::gl3::setViewMatrix(const_cast<float*>(identity));
+                const float angleY = 0.62f;
+                const float angleX = 0.38f;
+                const float cy = cosf(angleY), sy = sinf(angleY);
+                const float cx = cosf(angleX), sx = sinf(angleX);
+                // Column-major view matrix: rotate the cube and place it 3 units ahead.
+                const float view[16] = {
+                    cy, sx * sy, -cx * sy, 0,
+                    0,  cx,       sx,       0,
+                    sy, -sx * cy, cx * cy,  0,
+                    0,  0,       -3.2f,    1
+                };
+                rw::gl3::setProjectionMatrix(const_cast<float*>(projection));
+                rw::gl3::setViewMatrix(const_cast<float*>(view));
 
                 // Restore GLKView's drawable: librw's host backend assumes FBO 0.
                 glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)hostFramebuffer);
@@ -223,8 +256,8 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
                 if (framebufferStatus != GL_FRAMEBUFFER_COMPLETE) {
                     result = -100 - (int)framebufferStatus;
                 } else {
-                rw::SetRenderState(rw::ZTESTENABLE, 0);
-                rw::SetRenderState(rw::ZWRITEENABLE, 0);
+                rw::SetRenderState(rw::ZTESTENABLE, 1);
+                rw::SetRenderState(rw::ZWRITEENABLE, 1);
                 rw::SetRenderState(rw::CULLMODE, rw::CULLNONE);
                 rw::SetRenderState(rw::FOGENABLE, 0);
                 rw::SetRenderState(rw::VERTEXALPHA, 0);
