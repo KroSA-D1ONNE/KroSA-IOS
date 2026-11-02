@@ -72,7 +72,7 @@ edit("src/gl/gl3device.cpp", [
 ])
 
 edit("src/gl/gl3device.cpp", [
-    ('\tdefaultShader = Shader::create(vs, fs);\n\tassert(defaultShader);\n\tdefaultShader_noAT = Shader::create(vs, fs_noAT);\n\tassert(defaultShader_noAT);\n\tdefaultShader_fullLight = Shader::create(vs_fullLight, fs);\n\tassert(defaultShader_fullLight);\n\tdefaultShader_fullLight_noAT = Shader::create(vs_fullLight, fs_noAT);\n\tassert(defaultShader_fullLight_noAT);',
+    ('\tdefaultShader = Shader::create(vs, fs);\n\tassert(defaultShader);\n\tdefaultShader_noAT = Shader::create(vs, fs_noAT);\n\tassert(defaultShader_noAT);\n\n\tdefaultShader_fullLight = Shader::create(vs_fullLight, fs);\n\tassert(defaultShader_fullLight);\n\tdefaultShader_fullLight_noAT = Shader::create(vs_fullLight, fs_noAT);\n\tassert(defaultShader_fullLight_noAT);',
      '\tdefaultShader = Shader::create(vs, fs);\n\tdefaultShader_noAT = Shader::create(vs, fs_noAT);\n\tdefaultShader_fullLight = Shader::create(vs_fullLight, fs);\n\tdefaultShader_fullLight_noAT = Shader::create(vs_fullLight, fs_noAT);\n\tif(!defaultShader || !defaultShader_noAT || !defaultShader_fullLight || !defaultShader_fullLight_noAT){\n\t\tif(defaultShader) defaultShader->destroy();\n\t\tif(defaultShader_noAT) defaultShader_noAT->destroy();\n\t\tif(defaultShader_fullLight) defaultShader_fullLight->destroy();\n\t\tif(defaultShader_fullLight_noAT) defaultShader_fullLight_noAT->destroy();\n\t\tdefaultShader = defaultShader_noAT = defaultShader_fullLight = defaultShader_fullLight_noAT = nil;\n\t\tglDeleteTextures(1, &whitetex);\n\t\twhitetex = 0;\n\t\treturn 0;\n\t}')
 ])
 
