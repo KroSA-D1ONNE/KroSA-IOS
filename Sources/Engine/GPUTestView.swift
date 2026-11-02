@@ -24,7 +24,17 @@ struct GPUTestView: View {
                 }, onGL3Initialized: { result in
                     librwGL3Status = result == 1 ? "LIBRW GL3 + EAGL: OK · SHADERS INICIALIZADOS" : "LIBRW GL3 + EAGL: ERROR · \(result)"
                 }, onGeometryDrawn: { result in
-                    geometryStatus = result == 1 ? "LIBRW GEOMETRY: OK · TRIÁNGULO DIBUJADO" : "LIBRW GEOMETRY: ERROR · \(result)"
+                    if result == 1 {
+                        geometryStatus = "LIBRW GEOMETRY: OK · TRIÁNGULO VERDE"
+                    } else if result <= -1000 {
+                        let packed = -result - 1000
+                        let red = (packed >> 16) & 255
+                        let green = (packed >> 8) & 255
+                        let blue = packed & 255
+                        geometryStatus = "LIBRW GEOMETRY: RGB \(red),\(green),\(blue)"
+                    } else {
+                        geometryStatus = "LIBRW GEOMETRY: ERROR · \(result)"
+                    }
                 })
                     .frame(maxWidth: .infinity)
                     .aspectRatio(1, contentMode: .fit)
