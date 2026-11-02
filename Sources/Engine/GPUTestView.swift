@@ -162,9 +162,7 @@ struct GPUTestView: View {
                             let nonBlackPixels = krosaGetLastGeometryMetric(11)
                             let maxGreen = krosaGetLastGeometryMetric(12)
                             let preBluePixels = krosaGetLastGeometryMetric(13)
-                            geometryStatus = result == 1
-                                ? "GEOMETRÍA LIBRW: OK · TRIÁNGULO DIBUJADO"
-                                : "GEOMETRÍA LIBRW: ERROR \(result) · FLAGS \(flags) · PIX \(red),\(green),\(blue) · FBO \(framebuffer) · VP \(vx),\(vy),\(vw),\(vh) · IDX \(indices) · PRIM \(primitive) · VERT \(vertices) · MESH \(meshes) · ATTR \(attributes) · GREEN PX \(coloredPixels) · BOX \(minX),\(minY)-\(maxX),\(maxY) · BLUE PX \(bluePixels) · NONBLACK \(nonBlackPixels) · MAX G \(maxGreen) · PRE BLUE PX \(preBluePixels)"
+                            geometryStatus = (result == 1 ? "GEOMETRÍA LIBRW: OK · TRIÁNGULO DIBUJADO" : "GEOMETRÍA LIBRW: ERROR \(result)") + " · FLAGS \(flags) · PIX \(red),\(green),\(blue) · FBO \(framebuffer) · VP \(vx),\(vy),\(vw),\(vh) · IDX \(indices) · PRIM \(primitive) · VERT \(vertices) · MESH \(meshes) · ATTR \(attributes) · GREEN PX \(coloredPixels) · BOX \(minX),\(minY)-\(maxX),\(maxY) · BLUE PX \(bluePixels) · NONBLACK \(nonBlackPixels) · MAX G \(maxGreen) · PRE BLUE PX \(preBluePixels)"
                         }
                     )
                     .frame(maxWidth: .infinity)
