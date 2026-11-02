@@ -4,8 +4,6 @@
 #define RW_GL3
 #define LIBRW_EAGL
 #include "rw.h"
-#include "src/rwengine.h"
-#include "src/gl/rwgl3.h"
 
 extern "C" int krosaRenderWareCoreSmokeTest(void) {
     if (rw::Engine::state != rw::Engine::Dead) {
