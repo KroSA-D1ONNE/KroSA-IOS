@@ -7,6 +7,9 @@
 
 extern "C" void krosaResetGL3DrawDiagnostics(void);
 extern "C" int krosaGetGL3DrawDiagnostics(void);
+extern "C" int krosaGetGL3DrawPixel(int);
+extern "C" int krosaGetGL3DrawFramebuffer(void);
+extern "C" int krosaGetGL3DrawViewport(int);
 static int krosaLastGeometryDrawFlags = 0;
 extern "C" int krosaGetLastGeometryDrawFlags(void) { return krosaLastGeometryDrawFlags; }
 
