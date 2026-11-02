@@ -32,12 +32,13 @@ struct GPUTestView: View {
                         let green = (packed >> 8) & 255
                         let blue = packed & 255
                         let flags = krosaGetLastGeometryDrawFlags()
-                        let reached = (flags & 1) != 0
-                        let shader = (flags & 2) != 0
-                        let vbo = (flags & 4) != 0
-                        let ibo = (flags & 8) != 0
-                        let position = (flags & 16) != 0
-                        let attribBuffer = (flags & 32) != 0
+                        let reached = (flags & 128) != 0
+                        let shader = (flags & 1) != 0
+                        let vbo = (flags & 2) != 0
+                        let ibo = (flags & 4) != 0
+                        let position = (flags & 8) != 0
+                        let attribBuffer = (flags & 16) != 0
+                        let preDrawOK = (flags & 32) != 0
                         let drawOK = (flags & 64) != 0
                         geometryStatus = "LIBRW RGB \(red),\(green),\(blue) · CB:\(reached ? "Y" : "N") SH:\(shader ? "Y" : "N") VBO:\(vbo ? "Y" : "N") IBO:\(ibo ? "Y" : "N") POS:\(position ? "Y" : "N") AB:\(attribBuffer ? "Y" : "N") DRAW:\(drawOK ? "OK" : "ERR")"
                     } else {
