@@ -112,6 +112,22 @@ shader = shader[:begin] + '''const char *simple_frag_src =
 ;''' + shader[finish + 2:]
 shader_path.write_text(shader)
 
+# Next isolate raw mesh vertex colors from librw's lighting/material pipeline.
+# The previous on-device probe showed a green diffuse result, so bypass ambient,
+# dynamic lighting and material multiplication while preserving in_color.
+vertex_path = ROOT / "src/gl/shaders/default_vs_gl.inc"
+vertex_shader = vertex_path.read_text()
+lighting = '''"v_color = in_color;\\n"
+"v_color.rgb += u_ambLight.rgb*surfAmbient;\\n"
+"v_color.rgb += DoDynamicLight(Vertex.xyz, Normal)*surfDiffuse;\\n"
+"v_color = clamp(v_color, 0.0, 1.0);\\n"
+"v_color *= u_matColor;\\n"'''
+raw_color = '"v_color = in_color;\\n"'
+if vertex_shader.count(lighting) != 1:
+    raise SystemExit("default_vs_gl.inc: expected original vertex lighting block exactly once")
+vertex_shader = vertex_shader.replace(lighting, raw_color, 1)
+vertex_path.write_text(vertex_shader)
+
 print("Applied iOS EAGL host patch to pinned librw source")
 
 # Instrument the actual GL3 draw callback, while its shader, VBO, IBO and
