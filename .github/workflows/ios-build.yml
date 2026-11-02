@@ -6,9 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [main, feature/librw-geometry-eagl]
-  pull_request:
-    branches: [main]
+    branches: [feature/librw-geometry-eagl]
   workflow_dispatch:
 
 jobs:
