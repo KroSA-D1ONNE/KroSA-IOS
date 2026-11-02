@@ -2,7 +2,7 @@ name: KroSA iOS Build
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/librw-geometry-eagl]
   pull_request:
     branches: [main]
   workflow_dispatch:
