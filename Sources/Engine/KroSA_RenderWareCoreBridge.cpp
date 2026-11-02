@@ -86,11 +86,19 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
         rw::Engine::state != rw::Engine::Dead || rw::engine != nullptr)
         return -1;
 
+    // GLAD is initialized by Engine::start(), so do not call its function
+    // pointers while capturing GLKView state before librw startup.
+    typedef void (*HostGetIntegervProc)(GLenum, GLint *);
+    HostGetIntegervProc hostGetIntegerv =
+        reinterpret_cast<HostGetIntegervProc>(dlsym(RTLD_DEFAULT, "glGetIntegerv"));
+    if (!hostGetIntegerv)
+        return -8;
+
     // GLKView owns a non-zero drawable framebuffer; preserve it across librw setup.
     GLint hostFramebuffer = 0;
     GLint hostViewport[4] = {0, 0, 0, 0};
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &hostFramebuffer);
-    glGetIntegerv(GL_VIEWPORT, hostViewport);
+    hostGetIntegerv(GL_FRAMEBUFFER_BINDING, &hostFramebuffer);
+    hostGetIntegerv(GL_VIEWPORT, hostViewport);
     if (hostFramebuffer == 0)
         return -7;
 
