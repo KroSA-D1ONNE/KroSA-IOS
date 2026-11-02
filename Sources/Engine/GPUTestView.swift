@@ -239,6 +239,7 @@ private struct GLES2TextureView: UIViewRepresentable {
                 let result = krosaLibrwGL3GeometrySmokeTest(
                     Int32(view.drawableWidth), Int32(view.drawableHeight)
                 )
+                onGL3Initialized?(krosaGetLastGeometryInitStatus())
                 onGeometryDrawn?(result)
             }
         }
