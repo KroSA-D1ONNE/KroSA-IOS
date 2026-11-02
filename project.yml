@@ -43,3 +43,15 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.krosa.ios.uitests
         GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  KroSA:
+    build:
+      targets:
+        KroSA: all
+    test:
+      config: Debug
+      targets:
+        - KroSAUITests
+    run:
+      config: Debug
