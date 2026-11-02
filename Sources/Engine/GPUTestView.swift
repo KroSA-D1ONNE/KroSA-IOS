@@ -219,6 +219,20 @@ struct GPUTestView: View {
     }
 }
 
+/// GLKView can receive its first draw request while SwiftUI is still assigning
+/// its final frame. Retry once the drawable has a real, non-zero layout size.
+private final class KroSAGLKView: GLKView {
+    private var lastDrawableBounds: CGRect = .zero
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard bounds.width > 0, bounds.height > 0 else { return }
+        guard bounds != lastDrawableBounds else { return }
+        lastDrawableBounds = bounds
+        setNeedsDisplay()
+    }
+}
+
 private struct GLES2TextureView: UIViewRepresentable {
     let onContextValidated: (Bool) -> Void
     let onGL3Initialized: (Int32) -> Void
@@ -259,7 +273,7 @@ private struct GLES2TextureView: UIViewRepresentable {
             onGeometryDrawn(-90)
             return label
         }
-        let view = GLKView(frame: .zero, context: glContext)
+        let view = KroSAGLKView(frame: .zero, context: glContext)
         view.delegate = context.coordinator
         view.drawableColorFormat = .RGBA8888
         view.drawableDepthFormat = .format16
@@ -270,7 +284,12 @@ private struct GLES2TextureView: UIViewRepresentable {
         view.addGestureRecognizer(pan)
         view.addGestureRecognizer(pinch)
         context.coordinator.hostView = view
-        view.setNeedsDisplay()
+        // Wait until SwiftUI has completed its first layout before requesting
+        // the initial frame; layoutSubviews also retries if the size changes.
+        DispatchQueue.main.async { [weak view] in
+            guard let view, view.bounds.width > 0, view.bounds.height > 0 else { return }
+            view.setNeedsDisplay()
+        }
         return view
         #endif
     }
@@ -360,14 +379,22 @@ private struct GLES2TextureView: UIViewRepresentable {
 
         func glkView(_ view: GLKView, drawIn rect: CGRect) {
             guard let glContext, EAGLContext.setCurrent(glContext) else { return }
+            // SwiftUI may invoke the delegate before the first non-zero layout.
+            // Do not initialize librw against a zero-sized host drawable.
+            guard view.bounds.width > 0, view.bounds.height > 0 else { return }
+
             if !didValidateNativeContext {
                 didValidateNativeContext = true
-                onContextValidated?(krosaOpenGLESContextSmokeTest() == 1)
+                let contextIsValid = krosaOpenGLESContextSmokeTest() == 1
+                DispatchQueue.main.async { [weak self] in
+                    self?.onContextValidated?(contextIsValid)
+                }
             }
 
             // Avoid GLKView drawable size getters: their GLES dispatch crashes on this simulator.
-            let drawableWidth = max(1, Int32(view.bounds.width * view.contentScaleFactor))
-            let drawableHeight = max(1, Int32(view.bounds.height * view.contentScaleFactor))
+            let drawableWidth = Int32(view.bounds.width * view.contentScaleFactor)
+            let drawableHeight = Int32(view.bounds.height * view.contentScaleFactor)
+            guard drawableWidth > 0, drawableHeight > 0 else { return }
             glViewport(0, 0, drawableWidth, drawableHeight)
             glClearColor(0.025, 0.04, 0.03, 1.0)
             glClear(GLbitfield(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT))
