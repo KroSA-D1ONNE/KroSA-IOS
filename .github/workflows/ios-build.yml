@@ -19,8 +19,30 @@ jobs:
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
 
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      - name: Install CMake and XcodeGen
+        run: brew install cmake xcodegen
+
+      - name: Fetch pinned librw source
+        run: |
+          mkdir -p vendor/librw
+          git -C vendor/librw init
+          git -C vendor/librw remote add origin https://github.com/aap/librw.git
+          git -C vendor/librw fetch --depth 1 origin 18532c2e13efbc1aa43f0b00b4459831f9414de0
+          git -C vendor/librw checkout FETCH_HEAD
+
+      - name: Build librw core for iOS arm64
+        run: |
+          cmake -S vendor/librw -B build/librw-ios \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_SYSROOT=iphoneos \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=15.1 \
+            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=${{ github.workspace }}/build/librw-ios/lib \
+            -DLIBRW_PLATFORM=NULL \
+            -DLIBRW_TOOLS=OFF \
+            -DLIBRW_INSTALL=OFF
+          cmake --build build/librw-ios --config Release --parallel 2
+          test -f build/librw-ios/lib/librw.a
 
       - name: Generate Xcode project
         run: xcodegen generate
