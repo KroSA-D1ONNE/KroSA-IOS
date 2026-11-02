@@ -396,17 +396,23 @@ private struct GLES2TextureView: UIViewRepresentable {
                 glDisableVertexAttribArray(texCoord)
             }
 
-            // Re-render the librw scene with the current touch-controlled camera.
-            // This prototype restarts the smoke-test lifecycle per frame; the next
-            // optimization is keeping the RenderWare device alive between frames.
+            // Re-render librw with the current touch-controlled camera.
+            // RenderWare's device and GL3 shaders remain alive between frames.
             let result = krosaLibrwGL3GeometrySmokeTest(
                 drawableWidth, drawableHeight, cameraYaw, cameraPitch, cameraDistance
             )
             if !didRunGeometryTest {
                 didRunGeometryTest = true
-                onGL3Initialized?(krosaGetLastGeometryInitStatus())
+                let initStatus = krosaGetLastGeometryInitStatus()
+                // Never mutate SwiftUI state from inside GLKView's draw callback.
+                // A single deferred report also prevents redraw/update recursion
+                // when touch gestures request another frame.
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    self.onGL3Initialized?(initStatus)
+                    self.onGeometryDrawn?(result)
+                }
             }
-            onGeometryDrawn?(result)
         }
 
         deinit {
