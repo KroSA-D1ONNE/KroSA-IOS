@@ -135,13 +135,20 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
                 rw::gl3::setViewMatrix(const_cast<float*>(identity));
                 glViewport(0, 0, width, height);
                 rw::SetRenderState(rw::ZTESTENABLE, 0);
+                rw::SetRenderState(rw::ZWRITEENABLE, 0);
                 rw::SetRenderState(rw::CULLMODE, rw::CULLNONE);
+                rw::SetRenderState(rw::FOGENABLE, 0);
+                rw::SetRenderState(rw::VERTEXALPHA, 0);
+                rw::SetRenderState(rw::ALPHATEST, 0);
                 atomic->render();
                 glFinish();
                 GLubyte centerPixel[4] = {0, 0, 0, 0};
                 glReadPixels(width / 2, height / 2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, centerPixel);
+                const GLenum renderError = glGetError();
                 const bool greenPixel = centerPixel[1] > centerPixel[0] + 35 && centerPixel[1] > centerPixel[2] + 20;
-                result = glGetError() != GL_NO_ERROR ? -6 : (greenPixel ? 1 : -7);
+                // Preserve the sampled RGB in the error code to diagnose the exact output.
+                result = renderError != GL_NO_ERROR ? -6 :
+                    (greenPixel ? 1 : -(1000 + centerPixel[0] * 65536 + centerPixel[1] * 256 + centerPixel[2]));
             }
         }
     }
