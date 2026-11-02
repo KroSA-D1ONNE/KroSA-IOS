@@ -88,10 +88,16 @@ edit("src/engine.cpp", [
 # matrices and draw path, but replace only its fragment shader with solid green.
 # The framebuffer snapshot in defaultRenderCB is taken immediately after this
 # original librw draw and before the separate diagnostic bypass draw.
-edit("src/gl/shaders/simple_fs_gl.inc", [
-    ('const char *simple_frag_src =\n"uniform sampler2D tex0;\\n"\n\n"FSIN vec4 v_color;\\n"\n"FSIN vec2 v_tex0;\\n"FSIN float v_fog;\\n"\n\n"void\\n"\n"main(void)\\n"\n"{\\n"\n"\\tvec4 color = v_color*texture(tex0, vec2(v_tex0.x, 1.0-v_tex0.y));\\n"\n"\\tcolor.rgb = mix(u_fogColor.rgb, color.rgb, v_fog);\\n"\n"\\tDoAlphaTest(color.a);\\n"\n"\\tFRAGCOLOR(color);\\n"\n"}\\n"\n\n";',
-     'const char *simple_frag_src =\\n"precision mediump float;\\n"\\n"void main(void) { FRAGCOLOR(vec4(0.0, 1.0, 0.0, 1.0)); }\\n";')
-])
+p = ROOT / "src/gl/shaders/simple_fs_gl.inc"
+shader_source = p.read_text()
+shader_start = shader_source.index("const char *simple_frag_src =")
+shader_end = shader_source.index(";", shader_start) + 1
+shader_source = shader_source[:shader_start] + (
+    'const char *simple_frag_src =\\n'
+    '"precision mediump float;\\n"'
+    '"void main(void) { FRAGCOLOR(vec4(0.0, 1.0, 0.0, 1.0)); }\\n";'
+) + shader_source[shader_end:]
+p.write_text(shader_source)
 
 print("Applied iOS EAGL host patch to pinned librw source")
 
