@@ -185,6 +185,8 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
                 rw::SetRenderState(rw::FOGENABLE, 0);
                 rw::SetRenderState(rw::VERTEXALPHA, 0);
                 while (glGetError() != GL_NO_ERROR) {}
+                // Explicitly set a known white fog color to exercise the uniform upload path.
+                rw::SetRenderState(rw::FOGCOLOR, 0xFFFFFFFF);
                 krosaResetGL3DrawDiagnostics();
                 atomic->render();
                 krosaLastGeometryDrawFlags = krosaGetGL3DrawDiagnostics();
