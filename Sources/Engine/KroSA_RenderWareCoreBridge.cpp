@@ -142,7 +142,7 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
         texture->setFilter(rw::Texture::NEAREST);
         texture->setAddressU(rw::Texture::CLAMP);
         texture->setAddressV(rw::Texture::CLAMP);
-        uint8 *texels = textureRaster->lock(0, rw::Raster::LOCKWRITE | rw::Raster::LOCKNOFETCH);
+        rw::uint8 *texels = textureRaster->lock(0, rw::Raster::LOCKWRITE | rw::Raster::LOCKNOFETCH);
         if (texels) {
             for (int y = 0; y < 8; ++y) {
                 for (int x = 0; x < 8; ++x) {
