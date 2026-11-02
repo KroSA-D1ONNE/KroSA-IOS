@@ -21,12 +21,12 @@ struct ContentView: View {
                 VStack(spacing: 10) {
                     Text("KroSA")
                         .font(.system(size: 48, weight: .black, design: .rounded))
-                        .tracking(1.5)
+                        .kerning(1.5)
                         .foregroundStyle(Color(red: 0.35, green: 0.95, blue: 0.48))
 
                     Text("SAN ANDREAS MULTIPLAYER")
                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .tracking(3)
+                        .kerning(3)
                         .foregroundStyle(.white.opacity(0.55))
                 }
 
@@ -47,7 +47,7 @@ struct ContentView: View {
                         Image(systemName: "arrow.right")
                     }
                     .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .tracking(1.2)
+                    .kerning(1.2)
                     .foregroundStyle(.black.opacity(0.85))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 17)
@@ -58,7 +58,7 @@ struct ContentView: View {
 
                 Text("GAME ENGINE NOT CONNECTED")
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .tracking(1.4)
+                    .kerning(1.4)
                     .foregroundStyle(.white.opacity(0.35))
                     .padding(.top, 16)
 
@@ -77,7 +77,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .tracking(1.5)
+                .kerning(1.5)
                 .foregroundStyle(.white.opacity(0.5))
 
             TextField(placeholder, text: text)
