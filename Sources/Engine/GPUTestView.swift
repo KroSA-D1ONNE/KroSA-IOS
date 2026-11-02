@@ -286,12 +286,9 @@ private struct GLES2TextureView: UIViewRepresentable {
         context.coordinator.hostView = view
         // Wait until SwiftUI has completed its first layout before requesting
         // the initial frame; layoutSubviews also retries if the size changes.
-        DispatchQueue.main.async { [weak view, weak renderer = context.coordinator] in
-            guard let view, let renderer else { return }
-            renderer.startFrameRequests(for: view)
-            if view.bounds.width > 0, view.bounds.height > 0 {
-                view.setNeedsDisplay()
-            }
+        DispatchQueue.main.async { [weak view] in
+            guard let view, view.bounds.width > 0, view.bounds.height > 0 else { return }
+            view.setNeedsDisplay()
         }
         return view
         #endif
@@ -301,9 +298,6 @@ private struct GLES2TextureView: UIViewRepresentable {
         (uiView as? GLKView)?.setNeedsDisplay()
     }
 
-    static func dismantleUIView(_ uiView: UIView, coordinator: Renderer) {
-        coordinator.stopFrameRequests()
-    }
 
     final class Renderer: NSObject, GLKViewDelegate {
         let glContext: EAGLContext?
@@ -315,27 +309,7 @@ private struct GLES2TextureView: UIViewRepresentable {
         private var didValidateNativeContext = false
         private var didRunGeometryTest = false
         private var lastReportedGeometryResult: Int32?
-        private var frameDisplayLink: CADisplayLink?
         weak var hostView: GLKView?
-
-        func startFrameRequests(for view: GLKView) {
-            hostView = view
-            guard frameDisplayLink == nil else { return }
-            let link = CADisplayLink(target: self, selector: #selector(requestNextFrame))
-            link.preferredFramesPerSecond = 30
-            link.add(to: .main, forMode: .common)
-            frameDisplayLink = link
-        }
-
-        func stopFrameRequests() {
-            frameDisplayLink?.invalidate()
-            frameDisplayLink = nil
-            hostView = nil
-        }
-
-        @objc private func requestNextFrame() {
-            hostView?.setNeedsDisplay()
-        }
         private var cameraYaw: Float = 0.62
         private var cameraPitch: Float = 0.38
         private var cameraDistance: Float = 3.2
