@@ -153,15 +153,36 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
                 rw::SetRenderState(rw::CULLMODE, rw::CULLNONE);
                 rw::SetRenderState(rw::FOGENABLE, 0);
                 rw::SetRenderState(rw::VERTEXALPHA, 0);
+                while (glGetError() != GL_NO_ERROR) {}
                 atomic->render();
                 glFinish();
+
+                // Snapshot the GL3 pipeline state before readback can affect diagnostics.
+                GLint currentProgram = 0;
+                GLint arrayBuffer = 0;
+                GLint elementBuffer = 0;
+                glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+                glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &arrayBuffer);
+                glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &elementBuffer);
+                const GLenum drawError = glGetError();
+
                 GLubyte centerPixel[4] = {0, 0, 0, 0};
                 glReadPixels(width / 2, height / 2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, centerPixel);
-                const GLenum renderError = glGetError();
+                const GLenum readError = glGetError();
                 const bool greenPixel = centerPixel[1] > centerPixel[0] + 35 && centerPixel[1] > centerPixel[2] + 20;
-                // Preserve the sampled RGB in the error code to diagnose the exact output.
-                result = renderError != GL_NO_ERROR ? -6 :
-                    (greenPixel ? 1 : -(1000 + centerPixel[0] * 65536 + centerPixel[1] * 256 + centerPixel[2]));
+
+                // Distinct codes identify a missing shader, missing VBO/IBO, or GL draw/readback error.
+                if (currentProgram == 0)
+                    result = -2001;
+                else if (arrayBuffer == 0 || elementBuffer == 0)
+                    result = -2002;
+                else if (drawError != GL_NO_ERROR)
+                    result = -2100 - (int)drawError;
+                else if (readError != GL_NO_ERROR)
+                    result = -2200 - (int)readError;
+                else
+                    result = greenPixel ? 1 :
+                        -(1000 + centerPixel[0] * 65536 + centerPixel[1] * 256 + centerPixel[2]);
                 }
             }
         }
