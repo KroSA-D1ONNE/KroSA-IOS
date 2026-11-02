@@ -390,12 +390,6 @@ private struct GLESTriangleTestView: UIViewRepresentable {
 
         override init() {
             super.init()
-            guard EAGLContext.current() != nil else {
-                shaderError = "NO CURRENT EAGL CONTEXT"
-                return
-            }
-            program = Self.buildProgram()
-            if program == 0 { shaderError = "SHADER / PROGRAM LINK FAILED" }
         }
 
         private static func compile(_ type: GLenum, _ source: String) -> GLuint {
@@ -454,6 +448,7 @@ private struct GLESTriangleTestView: UIViewRepresentable {
             glViewport(0, 0, width, height)
             glClearColor(0.035, 0.055, 0.10, 1.0)
             glClear(GLbitfield(GL_COLOR_BUFFER_BIT))
+            if program == 0 { program = Self.buildProgram() }
             guard program != 0 else { glFlush(); return }
 
             let vertices: [GLfloat] = [
