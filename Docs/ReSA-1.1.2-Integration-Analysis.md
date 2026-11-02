@@ -40,3 +40,28 @@ The iOS Documents directory is the app-private directory exposed in Files as `On
 - Successful engine startup on a physical iPhone.
 
 The unsigned CI build validates only the Swift launcher target. It is not a playable build.
+
+
+## Additional ABI inspection (2026-11-02)
+
+The two framework Mach-O binaries are arm64 dynamic libraries and both declare iOS 15.1 as their minimum OS. The ReSAEngine framework's direct dynamic dependencies include CoreVideo, CoreAudio, AudioToolbox, AVFoundation/AVFAudio, CoreBluetooth, CoreGraphics, CoreMotion, Foundation/CoreFoundation, GameController (weak), Metal, OpenGLES, QuartzCore, UIKit, CoreHaptics (weak), OpenAL, IOSurface, Security, WebKit, zlib, and libc++.
+
+The ReSAEngine binary exports the following C symbols (leading underscore is the Mach-O symbol convention):
+
+- `ReSAIOSConfigureDocumentsRoot`
+- `ReSAIOSBootstrapReady`
+- `ReSAIOSEngineAvailable`
+- `ReSAIOSBootstrapStatus`
+- `ReSAIOSCopyDocumentsRoot`
+- `ReSAIOSHostCopyStatus`
+- `ReSAIOSHostCanStart`
+- `ReSAIOSHostStart`
+- `ReSAIOSHostRequestStop`
+- `ReSAIOSHostRunGeneration`
+- `ReSAIOSHostStateToken`
+- `ReSAIOSEngineGetApi`
+
+Important finding: the disassembly of `ReSAIOSEngineAvailable` at framework offset `0x86c8` is just `mov w0, #0; ret`. In this supplied framework binary the function therefore returns false unconditionally. That is a concrete blocker: the framework alone cannot currently be treated as a ready-to-launch engine. The original launcher may have additional bootstrap/registration steps or this framework may be a deliberately unavailable build. We must inspect the original app's call sequence and the versioned engine API before attempting to call `HostStart`.
+
+The `ReSAIOSHostStart` entry validates a caller-provided structure whose first 32-bit field must be at least `0x50` bytes and whose pointer fields at offsets `0x08` and `0x10` must be non-null. This is not enough to define the structure safely; do not construct it in Swift until its complete layout and ownership are recovered from the launcher executable/API metadata.
+
