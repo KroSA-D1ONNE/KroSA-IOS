@@ -5,6 +5,11 @@
 #define LIBRW_EAGL
 #include "rw.h"
 
+extern "C" void krosaResetGL3DrawDiagnostics(void);
+extern "C" int krosaGetGL3DrawDiagnostics(void);
+static int krosaLastGeometryDrawFlags = 0;
+extern "C" int krosaGetLastGeometryDrawFlags(void) { return krosaLastGeometryDrawFlags; }
+
 extern "C" int krosaRenderWareCoreSmokeTest(void) {
     if (rw::Engine::state != rw::Engine::Dead) {
         return 0;
@@ -154,7 +159,9 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height) {
                 rw::SetRenderState(rw::FOGENABLE, 0);
                 rw::SetRenderState(rw::VERTEXALPHA, 0);
                 while (glGetError() != GL_NO_ERROR) {}
+                krosaResetGL3DrawDiagnostics();
                 atomic->render();
+                krosaLastGeometryDrawFlags = krosaGetGL3DrawDiagnostics();
                 glFinish();
 
                 // Snapshot the GL3 pipeline state before readback can affect diagnostics.
