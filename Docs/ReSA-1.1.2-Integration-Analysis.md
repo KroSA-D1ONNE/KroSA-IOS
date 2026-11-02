@@ -65,3 +65,16 @@ Important finding: the disassembly of `ReSAIOSEngineAvailable` at framework offs
 
 The `ReSAIOSHostStart` entry validates a caller-provided structure whose first 32-bit field must be at least `0x50` bytes and whose pointer fields at offsets `0x08` and `0x10` must be non-null. This is not enough to define the structure safely; do not construct it in Swift until its complete layout and ownership are recovered from the launcher executable/API metadata.
 
+
+
+## Original launcher call-site evidence
+
+Further inspection of the original arm64 `ReSALauncher` executable confirms it directly imports the ReSAEngine C bridge symbols listed above. It also contains the concrete Swift types `IOSLauncherBridge`, `SADataBootstrap`, and `ReSAEngineLifecycle`. The mangled Swift symbol for the lifecycle entry point decodes to:
+
+`start(documentsRoot:nickname:host:port:password:serverName:sessionToken:sessionTokenExpiresAt:)`
+
+The launcher therefore owns important startup behavior that is not part of the two framework binaries alone. The executable also contains a `prepareAlLoader` method, so the alloader setup is an explicit launcher phase and should not be assumed to happen merely by embedding `alloader.framework`.
+
+The strings `engine-not-linked`, `engine-not-ready`, and `bootstrap-ready-engine-not-linked` occur in the supplied app. Combined with the framework's unconditional-false `ReSAIOSEngineAvailable`, this strengthens the conclusion that the supplied binary set may intentionally lack a linked/available engine implementation, or requires a separate registration/linkage stage. We must resolve this before writing the KroSA adapter.
+
+The next reverse-engineering target is the call sequence inside the original `ReSAEngineLifecycle.start`, plus `IOSLauncherBridge.configureEngineBootstrap` and `prepareAlLoader`. Recover the exact start-result structure and the host configuration struct layout before any FFI call. No guessed ABI has been added to KroSA.
