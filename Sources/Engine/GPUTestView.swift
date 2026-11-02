@@ -6,12 +6,13 @@ import OpenGLES
 /// UV coordinates and GLKBaseEffect's GLES shader pipeline.
 struct GPUTestView: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var renderWareStatus = "CORE SIN PROBAR"
 
     var body: some View {
         ZStack {
             Color(red: 0.035, green: 0.045, blue: 0.04).ignoresSafeArea()
             VStack(spacing: 18) {
-                Text("KroSA · TEXTURE TEST")
+                Text("KroSA · GRAPHICS TEST")
                     .font(.system(size: 15, weight: .bold, design: .monospaced))
                     .foregroundStyle(.white)
 
@@ -26,17 +27,36 @@ struct GPUTestView: View {
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundStyle(.green)
 
-                Text("Cuadrilátero texturizado con UV. La textura se genera en memoria y se sube a la GPU; no usa imágenes externas ni archivos de GTA.")
+                Text("Cuadrilátero texturizado con UV. La textura se genera en memoria; no usa imágenes externas ni archivos de GTA.")
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
 
+                Button {
+                    let result = krosaRenderWareCoreSmokeTest()
+                    renderWareStatus = result == 1
+                        ? "LIBRW CORE: OK · INIT / TERM"
+                        : "LIBRW CORE: ERROR · \(result)"
+                } label: {
+                    Text("PROBAR LIBRW CORE")
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color(red: 0.35, green: 0.95, blue: 0.48))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+
+                Text(renderWareStatus)
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(renderWareStatus.contains("OK") ? .green : .orange)
+
                 Button("VOLVER") { dismiss() }
                     .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.black)
+                    .foregroundStyle(.white.opacity(0.8))
                     .padding(.horizontal, 28)
                     .padding(.vertical, 13)
-                    .background(Color(red: 0.35, green: 0.95, blue: 0.48))
+                    .background(Color.white.opacity(0.08))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .padding(24)
