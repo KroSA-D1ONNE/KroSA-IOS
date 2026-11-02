@@ -21,6 +21,9 @@ int krosaLibrwGL3GeometrySmokeTest(int width, int height);
 
 /// Bit flags captured inside librw defaultRenderCB before/after glDrawElements.
 int krosaGetLastGeometryDrawFlags(void);
+int krosaGetLastGeometryPixel(int component);
+int krosaGetLastGeometryFramebuffer(void);
+int krosaGetLastGeometryViewport(int component);
 
 #ifdef __cplusplus
 }
