@@ -145,7 +145,6 @@ private struct GLES2TextureView: UIViewRepresentable {
         var onGL3Initialized: ((Int32) -> Void)?
         var onGeometryDrawn: ((Int32) -> Void)?
         private var didValidateNativeContext = false
-        private var didRunLibrwGL3Test = false
         private var didRunGeometryTest = false
 
         override init() {
@@ -199,11 +198,6 @@ private struct GLES2TextureView: UIViewRepresentable {
             if !didValidateNativeContext {
                 didValidateNativeContext = true
                 onContextValidated?(krosaOpenGLESContextSmokeTest() == 1)
-            }
-            if !didRunLibrwGL3Test {
-                didRunLibrwGL3Test = true
-                let result = krosaLibrwGL3InitSmokeTest(Int32(view.drawableWidth), Int32(view.drawableHeight))
-                onGL3Initialized?(result)
             }
 
             glViewport(0, 0, GLsizei(view.drawableWidth), GLsizei(view.drawableHeight))
