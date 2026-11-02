@@ -4,11 +4,12 @@ struct ContentView: View {
     @State private var nickname = ""
     @State private var serverAddress = ""
     @State private var serverPort = "7777"
+    @State private var dataReport = GameDataBootstrap.inspect()
 
     private var canContinue: Bool {
         !nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !serverAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        UInt16(serverPort) != nil
+        UInt16(serverPort) != nil && dataReport.isReady
     }
 
     var body: some View {
@@ -37,7 +38,21 @@ struct ContentView: View {
                         .keyboardType(.numberPad)
                 }
 
-                Spacer().frame(height: 28)
+                Spacer().frame(height: 24)
+
+                HStack(spacing: 9) {
+                    Image(systemName: dataReport.isReady ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                    Text(dataReport.summary)
+                        .lineLimit(2)
+                }
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .foregroundStyle(dataReport.isReady ? Color.green : Color.orange)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(13)
+                .background(Color.white.opacity(0.045))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                Spacer().frame(height: 18)
 
                 Button(action: {}) {
                     HStack(spacing: 10) {
@@ -53,9 +68,10 @@ struct ContentView: View {
                 }
                 .disabled(true)
 
-                Text("GAME ENGINE NOT CONNECTED")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                Text(dataReport.isReady ? "GAME ENGINE NOT INTEGRATED" : "COPIÁ LOS ARCHIVOS DE GTA SA EN DOCUMENTS/KROSA")
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.35))
+                    .multilineTextAlignment(.center)
                     .padding(.top, 16)
 
                 Spacer()
@@ -67,6 +83,12 @@ struct ContentView: View {
             .padding(.horizontal, 28)
             .frame(maxWidth: 460)
         }
+        .onAppear(perform: refreshDataStatus)
+    }
+
+    private func refreshDataStatus() {
+        try? GameDataBootstrap.provisionBundledText()
+        dataReport = GameDataBootstrap.inspect()
     }
 
     private func inputField(title: String, placeholder: String, text: Binding<String>) -> some View {
