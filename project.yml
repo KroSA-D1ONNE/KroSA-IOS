@@ -15,6 +15,9 @@ settings:
     INFOPLIST_KEY_UIFileSharingEnabled: YES
     INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: YES
     CODE_SIGN_STYLE: Automatic
+    CLANG_CXX_LANGUAGE_STANDARD: "c++11"
+    HEADER_SEARCH_PATHS: "$(inherited) $(SRCROOT)/vendor/librw"
+    OTHER_LDFLAGS: "$(inherited) $(SRCROOT)/build/librw-ios/lib/librw.a"
 targets:
   KroSA:
     type: application
@@ -26,3 +29,4 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.krosa.ios
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
         SWIFT_EMIT_LOC_STRINGS: YES
+        SWIFT_OBJC_BRIDGING_HEADER: Sources/Engine/KroSABridgingHeader.h
