@@ -11,6 +11,7 @@ struct GPUTestView: View {
     @State private var librwGL3Status = "LIBRW GL3 / EAGL SIN PROBAR"
     @State private var geometryStatus = "GEOMETRÍA LIBRW SIN PROBAR"
     @State private var showGLKViewTest = false
+    @State private var showTriangleTest = false
 
     var body: some View {
         ZStack {
@@ -88,6 +89,27 @@ struct GPUTestView: View {
                         .frame(height: 190)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     Text("Si ves el panel verde, GLKView creó el framebuffer y ejecutó glClear.")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundStyle(.green)
+                        .multilineTextAlignment(.center)
+                }
+
+                Button("INICIAR PRUEBA TRIÁNGULO GLES2") {
+                    showTriangleTest.toggle()
+                }
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundStyle(.black)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 12)
+                .background(Color.green)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                if showTriangleTest {
+                    GLESTriangleTestView()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 190)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    Text("Triángulo amarillo = compilación de shaders, enlace del programa y glDrawArrays GLES2.")
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundStyle(.green)
                         .multilineTextAlignment(.center)
@@ -336,6 +358,126 @@ private struct GLKClearTestView: UIViewRepresentable {
             glClearColor(0.04, 0.78, 0.22, 1.0)
             glClear(GLbitfield(GL_COLOR_BUFFER_BIT))
             glFlush()
+        }
+    }
+}
+
+
+/// Isolated GLES2 shader + geometry test. No GLKit effects and no librw.
+private struct GLESTriangleTestView: UIViewRepresentable {
+    func makeCoordinator() -> Renderer { Renderer() }
+
+    func makeUIView(context: Context) -> GLKView {
+        let glContext = EAGLContext(api: .openGLES2)!
+        EAGLContext.setCurrent(glContext)
+        let view = GLKView(frame: .zero, context: glContext)
+        view.delegate = context.coordinator
+        view.drawableColorFormat = .RGBA8888
+        view.drawableDepthFormat = .formatNone
+        view.enableSetNeedsDisplay = true
+        view.isOpaque = true
+        DispatchQueue.main.async { view.setNeedsDisplay() }
+        return view
+    }
+
+    func updateUIView(_ uiView: GLKView, context: Context) {
+        uiView.setNeedsDisplay()
+    }
+
+    final class Renderer: NSObject, GLKViewDelegate {
+        private var program: GLuint = 0
+        private var shaderError: String?
+
+        override init() {
+            super.init()
+            guard EAGLContext.current() != nil else {
+                shaderError = "NO CURRENT EAGL CONTEXT"
+                return
+            }
+            program = Self.buildProgram()
+            if program == 0 { shaderError = "SHADER / PROGRAM LINK FAILED" }
+        }
+
+        private static func compile(_ type: GLenum, _ source: String) -> GLuint {
+            let shader = glCreateShader(type)
+            guard shader != 0 else { return 0 }
+            source.withCString { pointer in
+                var sourcePointer: UnsafePointer<GLchar>? = UnsafeRawPointer(pointer).assumingMemoryBound(to: GLchar.self)
+                glShaderSource(shader, 1, &sourcePointer, nil)
+            }
+            glCompileShader(shader)
+            var status: GLint = 0
+            glGetShaderiv(shader, GLenum(GL_COMPILE_STATUS), &status)
+            guard status == GL_TRUE else {
+                glDeleteShader(shader)
+                return 0
+            }
+            return shader
+        }
+
+        private static func buildProgram() -> GLuint {
+            let vertexSource = """
+            attribute vec2 aPosition;
+            void main() { gl_Position = vec4(aPosition, 0.0, 1.0); }
+            """
+            let fragmentSource = """
+            precision mediump float;
+            void main() { gl_FragColor = vec4(1.0, 0.82, 0.12, 1.0); }
+            """
+            let vertex = compile(GLenum(GL_VERTEX_SHADER), vertexSource)
+            let fragment = compile(GLenum(GL_FRAGMENT_SHADER), fragmentSource)
+            guard vertex != 0, fragment != 0 else {
+                if vertex != 0 { glDeleteShader(vertex) }
+                if fragment != 0 { glDeleteShader(fragment) }
+                return 0
+            }
+            let linkedProgram = glCreateProgram()
+            glAttachShader(linkedProgram, vertex)
+            glAttachShader(linkedProgram, fragment)
+            glBindAttribLocation(linkedProgram, 0, "aPosition")
+            glLinkProgram(linkedProgram)
+            glDeleteShader(vertex)
+            glDeleteShader(fragment)
+            var status: GLint = 0
+            glGetProgramiv(linkedProgram, GLenum(GL_LINK_STATUS), &status)
+            guard status == GL_TRUE else {
+                glDeleteProgram(linkedProgram)
+                return 0
+            }
+            return linkedProgram
+        }
+
+        func glkView(_ view: GLKView, drawIn rect: CGRect) {
+            guard EAGLContext.setCurrent(view.context) else { return }
+            let width = max(1, GLsizei(view.bounds.width * view.contentScaleFactor))
+            let height = max(1, GLsizei(view.bounds.height * view.contentScaleFactor))
+            glViewport(0, 0, width, height)
+            glClearColor(0.035, 0.055, 0.10, 1.0)
+            glClear(GLbitfield(GL_COLOR_BUFFER_BIT))
+            guard program != 0 else { glFlush(); return }
+
+            let vertices: [GLfloat] = [
+                 0.0,  0.72,
+                -0.68, -0.58,
+                 0.68, -0.58
+            ]
+            glUseProgram(program)
+            glEnableVertexAttribArray(0)
+            vertices.withUnsafeBufferPointer { buffer in
+                guard let base = buffer.baseAddress else { return }
+                glVertexAttribPointer(0, 2, GLenum(GL_FLOAT), GLboolean(GL_FALSE), 0, UnsafeRawPointer(base))
+                glDrawArrays(GLenum(GL_TRIANGLES), 0, 3)
+            }
+            glDisableVertexAttribArray(0)
+            glUseProgram(0)
+            glFlush()
+        }
+
+        deinit {
+            if program != 0 {
+                _ = EAGLContext.setCurrent(EAGLContext.current())
+                glDeleteProgram(program)
+            }
         }
     }
 }
