@@ -53,6 +53,10 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
+      - name: Preserve device librw archive
+        run: |
+          cp build/librw-ios/lib/librw.a build/librw-device.a
+
       - name: Build librw GL3 backend for iOS Simulator arm64
         run: |
           cmake -S vendor/librw -B build/librw-simulator \
@@ -60,13 +64,14 @@ jobs:
             -DCMAKE_OSX_SYSROOT=iphonesimulator \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=15.1 \
-            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=${{ github.workspace }}/build/librw-ios/lib \
+            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=${{ github.workspace }}/build/librw-simulator/lib \
             -DLIBRW_PLATFORM=GL3 \
             -DLIBRW_GL3_GFXLIB=EAGL \
             -DLIBRW_TOOLS=OFF \
             -DLIBRW_INSTALL=OFF
           cmake --build build/librw-simulator --config Release --parallel 2
-          test -f build/librw-ios/lib/librw.a
+          test -f build/librw-simulator/lib/librw.a
+          cp build/librw-simulator/lib/librw.a build/librw-ios/lib/librw.a
 
       - name: Run GPU smoke test in iOS Simulator
         run: |
@@ -98,8 +103,8 @@ jobs:
 
       - name: Restore device librw library after simulator test
         run: |
-          cmake --build build/librw-ios --config Release --parallel 2
-          test -f build/librw-ios/lib/librw.a
+          cp build/librw-device.a build/librw-ios/lib/librw.a
+          file build/librw-ios/lib/librw.a
 
       - name: Build for iOS
         run: |
