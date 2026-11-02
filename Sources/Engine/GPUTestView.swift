@@ -153,9 +153,14 @@ struct GPUTestView: View {
                             let vertices = krosaGetLastGeometryMetric(2)
                             let meshes = krosaGetLastGeometryMetric(3)
                             let attributes = krosaGetLastGeometryMetric(4)
+                            let coloredPixels = krosaGetLastGeometryMetric(5)
+                            let minX = krosaGetLastGeometryMetric(6)
+                            let minY = krosaGetLastGeometryMetric(7)
+                            let maxX = krosaGetLastGeometryMetric(8)
+                            let maxY = krosaGetLastGeometryMetric(9)
                             geometryStatus = result == 1
                                 ? "GEOMETRÍA LIBRW: OK · TRIÁNGULO DIBUJADO"
-                                : "GEOMETRÍA LIBRW: ERROR \(result) · FLAGS \(flags) · PIX \(red),\(green),\(blue) · FBO \(framebuffer) · VP \(vx),\(vy),\(vw),\(vh) · IDX \(indices) · PRIM \(primitive) · VERT \(vertices) · MESH \(meshes) · ATTR \(attributes)"
+                                : "GEOMETRÍA LIBRW: ERROR \(result) · FLAGS \(flags) · PIX \(red),\(green),\(blue) · FBO \(framebuffer) · VP \(vx),\(vy),\(vw),\(vh) · IDX \(indices) · PRIM \(primitive) · VERT \(vertices) · MESH \(meshes) · ATTR \(attributes) · GREEN PX \(coloredPixels) · BOX \(minX),\(minY)-\(maxX),\(maxY)"
                         }
                     )
                     .frame(maxWidth: .infinity)
