@@ -1,7 +1,7 @@
 import XCTest
 
 final class KroSAGPUTests: XCTestCase {
-    func testOpenAndRunGPUTestWithoutCrashing() {
+    func testOpenGPUTestScreenWithoutStartingDeviceRenderer() {
         let app = XCUIApplication()
         app.launch()
 
@@ -17,11 +17,18 @@ final class KroSAGPUTests: XCTestCase {
         XCTAssertTrue(testTitle.waitForExistence(timeout: 15),
                       "La pantalla de test GPU no llegó a mostrarse")
 
-        let geometryStatus = app.staticTexts.matching(
-            NSPredicate(format: "label CONTAINS[cd] %@", "LIBRW GEOMETRY:")
-        ).firstMatch
-        XCTAssertTrue(geometryStatus.waitForExistence(timeout: 30),
-                      "El renderer no informó el resultado de geometría")
-        XCTAssertEqual(app.state, .runningForeground, "La aplicación se cerró durante el test GPU")
+        // Simulator CI intentionally does not instantiate GLKit/EAGL:
+        // its GLES dispatcher crashes before the app renderer can run.
+        // The physical-device EAGL test is started manually on an iPhone.
+        let preparedStatus = app.staticTexts["PRUEBA EAGL PREPARADA"]
+        XCTAssertTrue(preparedStatus.waitForExistence(timeout: 15),
+                      "No apareció el estado previo a iniciar EAGL")
+
+        let startButton = app.buttons["INICIAR PRUEBA EAGL"]
+        XCTAssertTrue(startButton.exists,
+                      "No apareció el botón para iniciar la prueba EAGL")
+
+        XCTAssertEqual(app.state, .runningForeground,
+                       "La aplicación se cerró al abrir la pantalla GPU")
     }
 }
