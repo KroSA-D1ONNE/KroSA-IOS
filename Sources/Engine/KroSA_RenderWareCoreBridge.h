@@ -16,6 +16,9 @@ int krosaOpenGLESContextSmokeTest(void);
 /// Returns 1 on success, or a negative stage-specific error code.
 int krosaLibrwGL3InitSmokeTest(int width, int height);
 
+/// Builds and draws a triangle through librw Geometry + the GL3 object pipeline.
+int krosaLibrwGL3GeometrySmokeTest(int width, int height);
+
 #ifdef __cplusplus
 }
 #endif
