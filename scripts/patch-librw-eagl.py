@@ -117,12 +117,12 @@ shader_path.write_text(shader)
 # dynamic lighting and material multiplication while preserving in_color.
 vertex_path = ROOT / "src/gl/shaders/default_vs_gl.inc"
 vertex_shader = vertex_path.read_text()
-lighting = '''"v_color = in_color;\\n"
-"v_color.rgb += u_ambLight.rgb*surfAmbient;\\n"
-"v_color.rgb += DoDynamicLight(Vertex.xyz, Normal)*surfDiffuse;\\n"
-"v_color = clamp(v_color, 0.0, 1.0);\\n"
-"v_color *= u_matColor;\\n"'''
-raw_color = '"v_color = in_color;\\n"'
+lighting = '''"\\tv_color = in_color;\\n"
+"\\tv_color.rgb += u_ambLight.rgb*surfAmbient;\\n"
+"\\tv_color.rgb += DoDynamicLight(Vertex.xyz, Normal)*surfDiffuse;\\n"
+"\\tv_color = clamp(v_color, 0.0, 1.0);\\n"
+"\\tv_color *= u_matColor;\\n"'''
+raw_color = '"\\tv_color = in_color;\\n"'
 if vertex_shader.count(lighting) != 1:
     raise SystemExit("default_vs_gl.inc: expected original vertex lighting block exactly once")
 vertex_shader = vertex_shader.replace(lighting, raw_color, 1)
