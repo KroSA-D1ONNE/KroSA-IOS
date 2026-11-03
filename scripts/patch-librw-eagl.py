@@ -315,6 +315,6 @@ edit("src/gl/gl3raster.cpp", [
      'rasterUnlock(Raster *raster, int32 level)\\n\\tkrosaRasterUnlockCount++;'),
     ('glPixelStorei(GL_UNPACK_ALIGNMENT, 1);',
      'glPixelStorei(GL_UNPACK_ALIGNMENT, 1);'),
-    ('glTexImage2D(GL_TEXTURE_2D, level, natras->internalFormat,\\n\\t\\t\\t     raster->width, raster->height,\\n\\t\\t\\t     0, natras->format, natras->type, raster->pixels);',
-     'glTexImage2D(GL_TEXTURE_2D, level, natras->internalFormat,\\n\\t\\t\\t     raster->width, raster->height,\\n\\t\\t\\t     0, natras->format, natras->type, raster->pixels);\\n\\t\\t\\tif(level == 0){ krosaUploadWidth=raster->width; krosaUploadHeight=raster->height; krosaUploadFormat=natras->internalFormat; krosaUploadError=glGetError(); }')
+    ('glTexImage2D(GL_TEXTURE_2D, level, natras->internalFormat,\\n\\t\\t\\t\\t\\t     raster->width, raster->height,\\n\\t\\t\\t\\t\\t     0, natras->format, natras->type, raster->pixels);',
+     'glTexImage2D(GL_TEXTURE_2D, level, natras->internalFormat,\\n\\t\\t\\t\\t\\t     raster->width, raster->height,\\n\\t\\t\\t\\t\\t     0, natras->format, natras->type, raster->pixels);\\n\\t\\t\\t\\tif(level == 0){ krosaUploadWidth=raster->width; krosaUploadHeight=raster->height; krosaUploadFormat=natras->internalFormat; krosaUploadError=glGetError(); }')
 ])
