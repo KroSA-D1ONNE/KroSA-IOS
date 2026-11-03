@@ -203,6 +203,8 @@ private struct GLES2TextureView: UIViewRepresentable {
         var onContextValidated: ((Bool) -> Void)?
         var onGL3Initialized: ((Int32) -> Void)?
         var onGeometryDrawn: ((Int32) -> Void)?
+        var onDiagnostics: ((String) -> Void)?
+        private var lastDiagnosticsReport: String?
         private var didValidateNativeContext = false
         private var didRunGeometryTest = false
         private var lastReportedGeometryResult: Int32?
