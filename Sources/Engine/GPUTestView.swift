@@ -161,12 +161,14 @@ private struct GLES2TextureView: UIViewRepresentable {
         view.drawableColorFormat = .RGBA8888
         view.drawableDepthFormat = .format16
         view.isOpaque = true
-        view.enableSetNeedsDisplay = true
+        // GLKView is driven by an explicit 30 FPS display link below.
+        view.enableSetNeedsDisplay = false
         let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Renderer.handlePan(_:)))
         let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Renderer.handlePinch(_:)))
         view.addGestureRecognizer(pan)
         view.addGestureRecognizer(pinch)
         context.coordinator.hostView = view
+        context.coordinator.startRendering()
         // Wait until SwiftUI has completed its first layout before requesting
         // the initial frame; layoutSubviews also retries if the size changes.
         DispatchQueue.main.async { [weak view] in
@@ -179,6 +181,7 @@ private struct GLES2TextureView: UIViewRepresentable {
 
     static func dismantleUIView(_ uiView: UIView, coordinator: Renderer) {
         #if !targetEnvironment(simulator)
+        coordinator.stopRendering()
         if let glContext = coordinator.glContext {
             _ = EAGLContext.setCurrent(glContext)
             krosaLibrwGL3Shutdown()
@@ -209,6 +212,7 @@ private struct GLES2TextureView: UIViewRepresentable {
         private var didRunGeometryTest = false
         private var lastReportedGeometryResult: Int32?
         weak var hostView: GLKView?
+        private var displayLink: CADisplayLink?
         private var cameraYaw: Float = 0.62
         private var cameraPitch: Float = 0.38
         private var cameraDistance: Float = 3.2
@@ -259,6 +263,23 @@ private struct GLES2TextureView: UIViewRepresentable {
                 )
             }
             glBindTexture(GLenum(GL_TEXTURE_2D), 0)
+        }
+
+        func startRendering() {
+            guard displayLink == nil else { return }
+            let link = CADisplayLink(target: self, selector: #selector(renderNextFrame))
+            link.preferredFramesPerSecond = 30
+            link.add(to: .main, forMode: .common)
+            displayLink = link
+        }
+
+        func stopRendering() {
+            displayLink?.invalidate()
+            displayLink = nil
+        }
+
+        @objc private func renderNextFrame() {
+            hostView?.display()
         }
 
         @objc func handlePan(_ gesture: UIPanGestureRecognizer) {
