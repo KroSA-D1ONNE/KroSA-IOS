@@ -135,6 +135,17 @@ edit("src/gl/gl3device.cpp", [
      "\tuniformStateDirty[RWGL_FOGCOLOR] = true;")
 ])
 
+
+# EAGL shares a context with GLKView. UIKit/GLKView may change active texture
+# units and bindings between frames, so librw's desktop-side binding cache is
+# not authoritative on iOS. Always issue the actual GLES state calls.
+edit("src/gl/gl3device.cpp", [
+    ('\tif(activeTexture != n){\n\t\tactiveTexture = n;\n\t\tglActiveTexture(GL_TEXTURE0+n);\n\t}',
+     '\tactiveTexture = n;\n\tglActiveTexture(GL_TEXTURE0+n);'),
+    ('\tuint32 prev = boundTexture[activeTexture];\n\tif(prev != texid){\n\t\tboundTexture[activeTexture] = texid;\n\t\tglBindTexture(GL_TEXTURE_2D, texid);\n\t}\n\treturn prev;',
+     '\tuint32 prev = boundTexture[activeTexture];\n\tboundTexture[activeTexture] = texid;\n\tglBindTexture(GL_TEXTURE_2D, texid);\n\treturn prev;')
+])
+
 # Keep upstream simple_fs_gl.inc unchanged: the next probe must sample real textures.
 # Next isolate raw mesh vertex colors from librw's lighting/material pipeline.
 # The previous on-device probe showed a green diffuse result, so bypass ambient,
