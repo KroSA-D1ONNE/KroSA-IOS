@@ -124,7 +124,7 @@ lighting = '''"\tv_color = in_color;\\n"
 "\tv_color.rgb += DoDynamicLight(Vertex.xyz, Normal)*surfDiffuse;\\n"
 "\tv_color = clamp(v_color, 0.0, 1.0);\\n"
 "\tv_color *= u_matColor;\\n"'''
-raw_color = '\"\\tv_color = vec4(1.0);\\\\n\"'
+raw_color = '\"\\tv_color = in_color;\\\\n\"'
 if vertex_shader.count(lighting) != 1:
     raise SystemExit("default_vs_gl.inc: expected original vertex lighting block exactly once")
 vertex_shader = vertex_shader.replace(lighting, raw_color, 1)
