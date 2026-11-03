@@ -182,53 +182,15 @@ int krosaGetGL3DrawMetric(int i) { switch(i){case 0:return krosaGL3IndexCount;ca
 \t\tif(positionBuffer) krosaGL3DrawFlags |= 16;
 \t\tif(glGetError() == GL_NO_ERROR) krosaGL3DrawFlags |= 32;
 \t\tdrawInst(header, inst);
-\t\t// Snapshot framebuffer BEFORE the diagnostic bypass to measure librw's own shader.
-\t\t{
-\t\t\tconst int preW = glGlobals.presentWidth, preH = glGlobals.presentHeight;
-\t\t\tif(preW > 0 && preH > 0 && preW <= 4096 && preH <= 4096){
-\t\t\t\tstd::vector<GLubyte> preScan((size_t)preW * (size_t)preH * 4);
-\t\t\t\tglReadPixels(0, 0, preW, preH, GL_RGBA, GL_UNSIGNED_BYTE, preScan.data());
-\t\t\t\tif(glGetError() == GL_NO_ERROR){
-\t\t\t\t\tkrosaGL3PreBluePixels = 0;
-\t\t\t\t\tfor(int py = 0; py < preH; py++) for(int px = 0; px < preW; px++){
-\t\t\t\t\t\tconst GLubyte *pp = &preScan[((size_t)py * preW + px) * 4];
-\t\t\t\t\t\tif(pp[2] > pp[1] + 40 && pp[2] > pp[0] + 40) krosaGL3PreBluePixels++;
-\t\t\t\t\t}
-\t\t\t\t}
-\t\t\t}
-\t\t}
-		// Diagnostic bypass disabled: only librw's own shader may draw.
-\t\tglGetIntegerv(GL_FRAMEBUFFER_BINDING, &krosaGL3Framebuffer);
-\t\tglGetIntegerv(GL_VIEWPORT, krosaGL3Viewport);
-\t\tGLubyte pixel[4] = {0,0,0,0};
-\t\tglReadPixels(glGlobals.presentWidth/2, glGlobals.presentHeight/2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
-\t\tkrosaGL3Pixel[0]=pixel[0]; krosaGL3Pixel[1]=pixel[1]; krosaGL3Pixel[2]=pixel[2];
-\t\tif(glGetError() == GL_NO_ERROR) krosaGL3DrawFlags |= 256;
-\t\t// Scan the full drawable: the center pixel alone cannot prove coverage.
-\t\tconst int scanW = glGlobals.presentWidth, scanH = glGlobals.presentHeight;
-\t\tif(scanW > 0 && scanH > 0 && scanW <= 4096 && scanH <= 4096){
-\t\t\tstd::vector<GLubyte> scan((size_t)scanW * (size_t)scanH * 4);
-\t\t\tglReadPixels(0, 0, scanW, scanH, GL_RGBA, GL_UNSIGNED_BYTE, scan.data());
-\t\t\tif(glGetError() == GL_NO_ERROR){
-\t\t\t\tkrosaGL3ColoredPixels = 0; krosaGL3BluePixels = 0; krosaGL3NonBlackPixels = 0; krosaGL3MaxGreen = 0;
-\t\t\t\tkrosaGL3MinX = scanW; krosaGL3MinY = scanH; krosaGL3MaxX = -1; krosaGL3MaxY = -1;
-\t\t\t\tfor(int y = 0; y < scanH; y++) for(int x = 0; x < scanW; x++){
-\t\t\t\t\tconst GLubyte *p = &scan[((size_t)y * scanW + x) * 4];
-\t\t\t\t\tif(p[0] > 8 || p[1] > 8 || p[2] > 8) krosaGL3NonBlackPixels++;
-\t\t\t\t\tif(p[2] > p[1] + 40 && p[2] > p[0] + 40) krosaGL3BluePixels++;
-\t\t\t\t\tif(p[1] > krosaGL3MaxGreen) krosaGL3MaxGreen = p[1];
-\t\t\t\t\tif(p[1] > p[0] + 25 && p[1] > p[2] + 15 && p[1] > 30){
-\t\t\t\t\t\tkrosaGL3ColoredPixels++;
-\t\t\t\t\t\tif(x < krosaGL3MinX) krosaGL3MinX = x; if(x > krosaGL3MaxX) krosaGL3MaxX = x;
-\t\t\t\t\t\tif(y < krosaGL3MinY) krosaGL3MinY = y; if(y > krosaGL3MaxY) krosaGL3MaxY = y;
-\t\t\t\t\t}
-\t\t\t\t}
-\t\t\t\tif(krosaGL3ColoredPixels == 0) krosaGL3MinX = krosaGL3MinY = krosaGL3MaxX = krosaGL3MaxY = -1;
-\t\t\t\tkrosaGL3DrawFlags |= 512;
-\t\t\t}
-\t\t}""")
+\t\t// Single-pixel diagnostic only; full-frame readbacks stall the iPhone GPU.
+		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &krosaGL3Framebuffer);
+		glGetIntegerv(GL_VIEWPORT, krosaGL3Viewport);
+		GLubyte pixel[4] = {0,0,0,0};
+		glReadPixels(glGlobals.presentWidth/2, glGlobals.presentHeight/2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+		krosaGL3Pixel[0]=pixel[0]; krosaGL3Pixel[1]=pixel[1]; krosaGL3Pixel[2]=pixel[2];
+		if(glGetError() == GL_NO_ERROR) krosaGL3DrawFlags |= 256;
+		}""")
 ])
-
 
 # Read back the actual GPU-side fog uniform after librw flushes it.
 # Values are exposed as milli-units through the existing geometry metric API.
