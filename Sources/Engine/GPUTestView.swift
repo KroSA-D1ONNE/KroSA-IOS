@@ -408,7 +408,7 @@ private struct GLES2TextureView: UIViewRepresentable {
             let viewport = (0...3).map { krosaGetLastGeometryViewport(Int32($0)) }
             let dffStatus = krosaGetLastDFFValidationStatus()
             let eaglStatus = krosaGetLastEAGLInitStatus()
-            let report = "EAGL:\(eaglStatus) DFF:\(dffStatus) FLAGS:\(flags) MESH:\(metrics[3]) IDX:\(metrics[0]) VTX:\(metrics[2])\\nPIXELS:\(metrics[5]) BOX:\(metrics[6]),\(metrics[7])-\(metrics[8]),\(metrics[9]) BLUE:\(metrics[10])\\nFBO:\(framebuffer) VP:\(viewport)"
+            let shaderError = String(cString: krosaGetEAGLShaderError())\n            let report = "EAGL:\(eaglStatus) DFF:\(dffStatus) FLAGS:\(flags) MESH:\(metrics[3]) IDX:\(metrics[0]) VTX:\(metrics[2])\\nPIXELS:\(metrics[5]) BOX:\(metrics[6]),\(metrics[7])-\(metrics[8]),\(metrics[9]) BLUE:\(metrics[10])\\nFBO:\(framebuffer) VP:\(viewport)\\nSHADER: \(shaderError)"
             if lastDiagnosticsReport != report {
                 lastDiagnosticsReport = report
                 DispatchQueue.main.async { [weak self] in self?.onDiagnostics?(report) }

@@ -85,7 +85,13 @@ edit("src/gl/gl3device.cpp", [
 ])
 
 edit("src/gl/gl3shader.cpp", [
-    ('namespace gl3 {\n', 'namespace gl3 {\n\nextern "C" void krosaSetEAGLShaderStatus(int status);\n'),
+    ('namespace gl3 {\n', 'namespace gl3 {\n\nstatic char krosaEAGLShaderError[2048] = {0};\nextern "C" void krosaSetEAGLShaderStatus(int status);\nextern "C" const char *krosaGetEAGLShaderError(void) { return krosaEAGLShaderError; }\n'),
+    ('GLint len;\n\tchar *log;\n\n\tfor(n = 0; src[n]; n++);',
+     'GLint len;\n\tchar *log;\n\tkrosaEAGLShaderError[0] = 0;\n\n\tfor(n = 0; src[n]; n++);'),
+    ('glGetShaderInfoLog(shdr, len, nil, log);',
+     'glGetShaderInfoLog(shdr, len, nil, log);\n\t\tsnprintf(krosaEAGLShaderError, sizeof(krosaEAGLShaderError), "%s", log);'),
+    ('glGetProgramInfoLog(prog, len, nil, log);',
+     'glGetProgramInfoLog(prog, len, nil, log);\n\t\tsnprintf(krosaEAGLShaderError, sizeof(krosaEAGLShaderError), "%s", log);'),
     ('if(!success){\n\t\tprintShaderSource(src);',
      'if(!success){\n\t\tkrosaSetEAGLShaderStatus(type == GL_VERTEX_SHADER ? -311 : -312);\n\t\tprintShaderSource(src);'),
     ('if(!success){\n\t\tfprintf(stderr, "Error in program\\n");',
