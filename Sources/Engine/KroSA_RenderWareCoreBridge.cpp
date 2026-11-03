@@ -126,6 +126,7 @@ extern "C" int krosaGetLastDFFValidationStatus(void) {
 
 static bool krosaLoadDFFIfAvailable() {
     if (krosaLoadedClump) return true;
+    krosaLoadTXDsIfAvailable();
     if (krosaDFFPath[0] == 0) { krosaDFFValidationStatus = -1; return false; }
     rw::StreamFile stream;
     if (!stream.open(krosaDFFPath, "rb")) { krosaDFFValidationStatus = -2; return false; }
@@ -184,6 +185,10 @@ extern "C" void krosaLibrwGL3Shutdown(void) {
         if (krosaSceneWorld && krosaLoadedClump->world == krosaSceneWorld) krosaSceneWorld->removeClump(krosaLoadedClump);
         krosaLoadedClump->destroy();
         krosaLoadedClump = nullptr;
+    }
+    if (krosaLoadedTXD) {
+        krosaLoadedTXD->destroy();
+        krosaLoadedTXD = nullptr;
     }
     if (krosaSceneAtomic) {
         if (krosaSceneWorld && krosaSceneAtomic->world == krosaSceneWorld) krosaSceneWorld->removeAtomic(krosaSceneAtomic);
