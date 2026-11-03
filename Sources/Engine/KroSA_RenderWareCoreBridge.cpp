@@ -1,6 +1,8 @@
 #include "KroSA_RenderWareCoreBridge.h"
 #include <dlfcn.h>
 #include <cmath>
+#include <cstdio>
+#include <cstring>
 
 #define RW_GL3
 #define LIBRW_EAGL
@@ -17,9 +19,52 @@ static rw::Frame *krosaSceneFrame = nullptr;
 static rw::Atomic *krosaSceneAtomic = nullptr;
 static rw::gl3::ObjPipeline *krosaScenePipeline = nullptr;
 static bool krosaSceneReady = false;
+static char krosaDFFPath[1024] = {0};
+static rw::Clump *krosaLoadedClump = nullptr;
+static float krosaLoadedClumpDistance = 3.2f;
+
+extern "C" void krosaLibrwGL3SetDFFPath(const char *path) {
+    if (!path) { krosaDFFPath[0] = 0; return; }
+    std::strncpy(krosaDFFPath, path, sizeof(krosaDFFPath) - 1);
+    krosaDFFPath[sizeof(krosaDFFPath) - 1] = 0;
+}
+
+static bool krosaLoadDFFIfAvailable() {
+    if (krosaLoadedClump || krosaDFFPath[0] == 0) return krosaLoadedClump != nullptr;
+    rw::StreamFile stream;
+    if (!stream.open(krosaDFFPath, "rb")) return false;
+    if (rw::findChunk(&stream, rw::ID_CLUMP, nullptr, nullptr))
+        krosaLoadedClump = rw::Clump::streamRead(&stream);
+    stream.close();
+    if (!krosaLoadedClump || krosaLoadedClump->countAtomics() == 0) {
+        if (krosaLoadedClump) krosaLoadedClump->destroy();
+        krosaLoadedClump = nullptr;
+        return false;
+    }
+    rw::V3d center = {0.0f, 0.0f, 0.0f};
+    int count = 0;
+    FORLIST(link, krosaLoadedClump->atomics) {
+        rw::Atomic *atomic = rw::Atomic::fromClump(link);
+        atomic->pipeline = rw::gl3::makeDefaultPipeline();
+        if (atomic->pipeline) atomic->pipeline->addRef();
+        rw::Sphere *sphere = atomic->getWorldBoundingSphere();
+        center = rw::add(center, sphere->center);
+        ++count;
+    }
+    if (count > 0) center = rw::scale(center, 1.0f / (float)count);
+    float radius = 0.0f;
+    FORLIST(link, krosaLoadedClump->atomics) {
+        rw::Sphere *sphere = rw::Atomic::fromClump(link)->getWorldBoundingSphere();
+        const float extent = rw::length(rw::sub(sphere->center, center)) + sphere->radius;
+        if (extent > radius) radius = extent;
+    }
+    krosaLoadedClumpDistance = radius > 0.001f ? radius * 3.2f : 3.2f;
+    return true;
+}
 
 extern "C" void krosaLibrwGL3Shutdown(void) {
     // Called by UIViewRepresentable dismantling with the creating EAGL context current.
+    if (krosaLoadedClump) { krosaLoadedClump->destroy(); krosaLoadedClump = nullptr; }
     if (krosaSceneAtomic) {
         krosaSceneAtomic->destroy();
         krosaSceneAtomic = nullptr;
@@ -235,6 +280,8 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
         }
     }
 
+    krosaLoadDFFIfAvailable();
+
     const float aspect = float(width) / float(height);
     const float f = 1.0f / 0.57735026919f;
     const float nearPlane = 0.1f;
@@ -247,11 +294,12 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
     };
     const float cy = cosf(angleY), sy = sinf(angleY);
     const float cx = cosf(angleX), sx = sinf(angleX);
+    const float effectiveDistance = krosaLoadedClump ? krosaLoadedClumpDistance : cameraDistance;
     const float view[16] = {
         cy, sx * sy, -cx * sy, 0,
         0, cx, sx, 0,
         sy, -sx * cy, cx * cy, 0,
-        0, 0, -cameraDistance, 1
+        0, 0, -effectiveDistance, 1
     };
     rw::gl3::setProjectionMatrix(const_cast<float*>(projection));
     rw::gl3::setViewMatrix(const_cast<float*>(view));
@@ -269,7 +317,8 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
         while (glGetError() != GL_NO_ERROR) {}
         rw::SetRenderState(rw::FOGCOLOR, 0xFFFFFFFF);
         krosaResetGL3DrawDiagnostics();
-        krosaSceneAtomic->render();
+        if (krosaLoadedClump) krosaLoadedClump->render();
+        else krosaSceneAtomic->render();
         krosaLastGeometryDrawFlags = krosaGetGL3DrawDiagnostics();
         glFinish();
 
