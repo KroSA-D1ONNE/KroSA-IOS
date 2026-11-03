@@ -5,7 +5,8 @@
 extern "C" {
 #endif
 
-const char *krosaGetEAGLShaderError(void);\nint krosaGetEAGLShaderStage(void);
+const char *krosaGetEAGLShaderError(void);
+int krosaGetEAGLShaderStage(void);
 /// Initializes and cleanly terminates the upstream RenderWare core.
 /// Returns 1 when the core reaches Initialized and returns to Dead; 0 on failure.
 int krosaRenderWareCoreSmokeTest(void);
