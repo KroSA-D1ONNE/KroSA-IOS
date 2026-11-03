@@ -32,7 +32,23 @@ enum GameFilesDirectory {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 
-    static var path: String {
+    
+    /// Cache local GTA texture dictionaries once; never enumerate the Files directory per frame.
+    static let textureDictionaryPaths: String = {
+        let root = url
+        let files = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles])?
+            .compactMap { $0 as? URL }
+            .filter { $0.pathExtension.lowercased() == "txd" }
+            .sorted { lhs, rhs in
+                let lhsRoot = lhs.deletingLastPathComponent() == root
+                let rhsRoot = rhs.deletingLastPathComponent() == root
+                if lhsRoot != rhsRoot { return lhsRoot }
+                return lhs.path.localizedCaseInsensitiveCompare(rhs.path) == .orderedAscending
+            }
+            .map(\.path) ?? []
+        return files.joined(separator: "\n")
+    }()
+\n    static var path: String {
         url.path
     }
 }
