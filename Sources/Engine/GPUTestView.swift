@@ -223,12 +223,7 @@ private struct GLES2TextureView: UIViewRepresentable {
             glContext = EAGLContext(api: .openGLES2)
             super.init()
             guard let glContext, EAGLContext.setCurrent(glContext) else { return }
-            createTestTexture()
-            effect.texture2d0.enabled = GLboolean(GL_TRUE)
-            effect.texture2d0.name = textureID
-            effect.texture2d0.envMode = .modulate
-            effect.transform.projectionMatrix = GLKMatrix4MakeOrtho(-1, 1, -1, 1, -1, 1)
-            effect.transform.modelviewMatrix = GLKMatrix4Identity
+            // librw exclusively owns GL state during the diagnostic render.
         }
 
         private func createTestTexture() {
@@ -382,30 +377,6 @@ private struct GLES2TextureView: UIViewRepresentable {
             glClearColor(0.025, 0.04, 0.03, 1.0)
             glClear(GLbitfield(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT))
 
-            // Interleaved position (XYZ) + texture coordinates (UV).
-            let vertices: [GLfloat] = [
-                -0.78, -0.68, 0,  0, 0,
-                 0.78, -0.68, 0,  1, 0,
-                -0.78,  0.68, 0,  0, 1,
-                 0.78,  0.68, 0,  1, 1
-            ]
-
-            effect.prepareToDraw()
-            vertices.withUnsafeBufferPointer { buffer in
-                guard let base = buffer.baseAddress else { return }
-                let stride = GLsizei(5 * MemoryLayout<GLfloat>.size)
-                let position = GLuint(GLKVertexAttrib.position.rawValue)
-                let texCoord = GLuint(GLKVertexAttrib.texCoord0.rawValue)
-
-                glEnableVertexAttribArray(position)
-                glEnableVertexAttribArray(texCoord)
-                glVertexAttribPointer(position, 3, GLenum(GL_FLOAT), GLboolean(GL_FALSE), stride, UnsafeRawPointer(base))
-                glVertexAttribPointer(texCoord, 2, GLenum(GL_FLOAT), GLboolean(GL_FALSE), stride, UnsafeRawPointer(base.advanced(by: 3)))
-                glDrawArrays(GLenum(GL_TRIANGLE_STRIP), 0, 4)
-                glDisableVertexAttribArray(position)
-                glDisableVertexAttribArray(texCoord)
-            }
-
             // Re-render librw with the current touch-controlled camera.
             // RenderWare's device and GL3 shaders remain alive between frames.
             let result = krosaLibrwGL3GeometrySmokeTest(
@@ -439,8 +410,7 @@ private struct GLES2TextureView: UIViewRepresentable {
                 DispatchQueue.main.async { [weak self] in self?.onDiagnostics?(report) }
             }
 
-            // Draw the known-good GLES2 marker after librw.
-            drawSentinelTriangle(width: drawableWidth, height: drawableHeight)
+            // Do not issue host GLES draws after librw: its GL state cache must remain authoritative.
         }
 
         deinit {
