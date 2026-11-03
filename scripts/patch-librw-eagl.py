@@ -339,3 +339,68 @@ inject_once(
 )
 p.write_text(raster_source)
 print("Applied iOS EAGL host patch to pinned librw source")
+
+
+# Trace the native TXD DXT decision and the actual compressed upload.
+# iOS GLES2 devices often lack S3TC; the native reader currently rejects
+# compressed textures before allocateDXT/rasterLock can run.
+p = ROOT / "src/gl/gl3raster.cpp"
+raster_source = p.read_text()
+dxt_diag = """
+static int krosaDXTSupported=-1, krosaDXTSeen=0, krosaDXTRejected=0;
+static int krosaDXTFormat=-1, krosaDXTLevels=-1, krosaDXTWidth=-1, krosaDXTHeight=-1;
+static int krosaDXTUploadBytes=-1, krosaDXTUploadError=-1, krosaDXTUploadCalls=0;
+extern "C" void krosaGetDXTDiagnostics(int *supported,int *seen,int *rejected,int *format,int *levels,int *width,int *height,int *bytes,int *error,int *uploads) {
+ if(supported)*supported=krosaDXTSupported; if(seen)*seen=krosaDXTSeen; if(rejected)*rejected=krosaDXTRejected;
+ if(format)*format=krosaDXTFormat; if(levels)*levels=krosaDXTLevels; if(width)*width=krosaDXTWidth; if(height)*height=krosaDXTHeight;
+ if(bytes)*bytes=krosaDXTUploadBytes; if(error)*error=krosaDXTUploadError; if(uploads)*uploads=krosaDXTUploadCalls;
+}
+"""
+if "krosaGetDXTDiagnostics" not in raster_source:
+    marker = "namespace gl3 {"
+    if raster_source.count(marker) != 1:
+        raise SystemExit("gl3raster.cpp: expected one namespace gl3")
+    raster_source = raster_source.replace(marker, marker + "\n" + dxt_diag, 1)
+
+# Record the exact native TXD metadata before deciding whether DXT is supported.
+needle = "if(flags & 2){\n\t\tif(!gl3Caps.dxtSupported){"
+replacement = """if(flags & 2){
+        krosaDXTSeen++;
+        krosaDXTSupported = gl3Caps.dxtSupported ? 1 : 0;
+        krosaDXTFormat = compression;
+        krosaDXTLevels = numLevels;
+        krosaDXTWidth = width;
+        krosaDXTHeight = height;
+        if(!gl3Caps.dxtSupported){
+            krosaDXTRejected++;"""
+if raster_source.count(needle) != 1:
+    raise SystemExit("gl3raster.cpp: native TXD DXT decision not found exactly once")
+raster_source = raster_source.replace(needle, replacement, 1)
+
+# Record the compressed upload's exact byte count and GLES error.
+needle = """glCompressedTexImage2D(GL_TEXTURE_2D, level, natras->internalFormat,
+                    raster->width, raster->height, 0,
+                    getLevelSize(raster, level),
+                    raster->pixels);"""
+replacement = """glCompressedTexImage2D(GL_TEXTURE_2D, level, natras->internalFormat,
+                    raster->width, raster->height, 0,
+                    getLevelSize(raster, level),
+                    raster->pixels);
+                krosaDXTUploadCalls++;
+                krosaDXTUploadBytes = getLevelSize(raster, level);
+                krosaDXTUploadError = glGetError();"""
+if raster_source.count(needle) != 1:
+    raise SystemExit("gl3raster.cpp: compressed upload call not found exactly once")
+raster_source = raster_source.replace(needle, replacement, 1)
+p.write_text(raster_source)
+
+# Surface the native DXT trace in the on-device diagnostic string.
+header = Path("Sources/Engine/KroSA_RenderWareCoreBridge.h")
+hs = header.read_text()
+decl = "void krosaGetDXTDiagnostics(int *supported, int *seen, int *rejected, int *format, int *levels, int *width, int *height, int *bytes, int *error, int *uploads);"
+if decl not in hs:
+    anchor = "void krosaGetRasterUploadDiagnostics("
+    if hs.count(anchor) != 1:
+        raise SystemExit("KroSA_RenderWareCoreBridge.h: raster diagnostics declaration missing")
+    hs = hs.replace(anchor, decl + "\n" + anchor, 1)
+header.write_text(hs)
