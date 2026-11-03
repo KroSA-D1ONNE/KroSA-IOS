@@ -317,6 +317,10 @@ private struct GLES2TextureView: UIViewRepresentable {
             glDisable(GLenum(GL_SCISSOR_TEST))
             glDisable(GLenum(GL_BLEND))
             glUseProgram(sentinelProgram)
+            // librw leaves its own VBO bound. With a non-zero ARRAY_BUFFER,
+            // glVertexAttribPointer interprets the Swift pointer as a byte offset,
+            // which can make Apple's GL driver abort when the frame is flushed.
+            glBindBuffer(GLenum(GL_ARRAY_BUFFER), 0)
             glEnableVertexAttribArray(0)
             vertices.withUnsafeBufferPointer { buffer in
                 guard let base = buffer.baseAddress else { return }
@@ -325,7 +329,7 @@ private struct GLES2TextureView: UIViewRepresentable {
             }
             glDisableVertexAttribArray(0)
             glUseProgram(0)
-            glFlush()
+            // GLKView owns presentation/flush for this drawable.
         }
 
         func glkView(_ view: GLKView, drawIn rect: CGRect) {
