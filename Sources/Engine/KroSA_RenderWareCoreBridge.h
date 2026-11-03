@@ -21,6 +21,8 @@ int krosaLibrwGL3InitSmokeTest(int width, int height);
 int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angleY, float angleX, float cameraDistance);
 /// Releases the test scene and GL3 device while the owning EAGL context is current.
 void krosaLibrwGL3Shutdown(void);
+/// Sets the optional user-provided DFF path; the file is streamed only after GL3 is ready.
+void krosaLibrwGL3SetDFFPath(const char *path);
 int krosaGetLastGeometryInitStatus(void);
 
 /// Bit flags captured inside librw defaultRenderCB before/after glDrawElements.
