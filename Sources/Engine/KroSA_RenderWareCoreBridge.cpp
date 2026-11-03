@@ -54,21 +54,29 @@ static bool krosaLoadTXDsIfAvailable() {
     std::strncpy(paths, krosaTXDPaths, sizeof(paths) - 1);
     paths[sizeof(paths) - 1] = 0;
     int loaded = 0;
-    char *save = nullptr;
-    for (char *path = std::strtok_r(paths, "\\n", &save); path; path = std::strtok_r(nullptr, "\\n", &save)) {
-        rw::StreamFile stream;
-        if (!stream.open(path, "rb")) continue;
-        const bool hasTXDChunk = rw::findChunk(&stream, rw::ID_TEXDICTIONARY, nullptr, nullptr);
-        rw::TexDictionary *dictionary = hasTXDChunk ? rw::TexDictionary::streamRead(&stream) : nullptr;
-        stream.close();
-        if (!dictionary) continue;
-        FORLIST(link, dictionary->textures) {
-            rw::Texture *texture = rw::Texture::fromDict(link);
-            dictionary->remove(texture);
-            krosaLoadedTXD->add(texture);
+    char *path = paths;
+    while (*path) {
+        char *end = std::strchr(path, '\\n');
+        if (end) *end = 0;
+        if (*path) {
+            rw::StreamFile stream;
+            if (stream.open(path, "rb")) {
+                const bool hasTXDChunk = rw::findChunk(&stream, rw::ID_TEXDICTIONARY, nullptr, nullptr);
+                rw::TexDictionary *dictionary = hasTXDChunk ? rw::TexDictionary::streamRead(&stream) : nullptr;
+                stream.close();
+                if (dictionary) {
+                    while (dictionary->textures.count() > 0) {
+                        rw::Texture *texture = rw::Texture::fromDict(dictionary->textures.next());
+                        dictionary->remove(texture);
+                        krosaLoadedTXD->add(texture);
+                    }
+                    dictionary->destroy();
+                    ++loaded;
+                }
+            }
         }
-        dictionary->destroy();
-        ++loaded;
+        if (!end) break;
+        path = end + 1;
     }
     rw::TexDictionary::setCurrent(krosaLoadedTXD);
     krosaTXDValidationStatus = loaded;
