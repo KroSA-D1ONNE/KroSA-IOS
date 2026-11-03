@@ -35,6 +35,7 @@ int krosaGetLastDFFValidationStatus(void);
 void krosaGetTXDDiagnostics(int *paths, int *opened, int *chunks, int *dicts, int *textures);
 void krosaGetMaterialDiagnostics(int *materials, int *textures, int *rasters, int *dictMatches, char *report, int capacity);
 void krosaGetTexturePathDiagnostics(int *uvEnabled, int *uvBuffer, int *uvSize, int *uvStride, int *textureBinding, int *sampler, int *activeUnit);
+void krosaGetRasterUploadDiagnostics(int *width, int *height, int *format, int *error);
 
 /// Bit flags captured inside librw defaultRenderCB before/after glDrawElements.
 int krosaGetLastGeometryDrawFlags(void);
