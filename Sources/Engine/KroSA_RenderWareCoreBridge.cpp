@@ -73,13 +73,19 @@ extern "C" int krosaGetLastDFFValidationStatus(void) {
 }
 
 static bool krosaLoadDFFIfAvailable() {
-    if (krosaLoadedClump || krosaDFFPath[0] == 0) return krosaLoadedClump != nullptr;
+    if (krosaLoadedClump) return true;
+    if (krosaDFFPath[0] == 0) { krosaDFFValidationStatus = -1; return false; }
     rw::StreamFile stream;
-    if (!stream.open(krosaDFFPath, "rb")) return false;
-    if (rw::findChunk(&stream, rw::ID_CLUMP, nullptr, nullptr))
+    if (!stream.open(krosaDFFPath, "rb")) { krosaDFFValidationStatus = -2; return false; }
+    const bool hasClumpChunk = rw::findChunk(&stream, rw::ID_CLUMP, nullptr, nullptr);
+    if (hasClumpChunk)
         krosaLoadedClump = rw::Clump::streamRead(&stream);
     stream.close();
-    if (!krosaClumpCanUseGL3(krosaLoadedClump)) {
+    if (!hasClumpChunk) krosaDFFValidationStatus = -3;
+    else if (!krosaLoadedClump) krosaDFFValidationStatus = -4;
+    const int validationFailure = krosaClumpGL3Failure(krosaLoadedClump);
+    if (validationFailure != 0) {
+        krosaDFFValidationStatus = validationFailure;
         // Some GTA DFFs contain native/plugin geometry that this generic GL3
         // pipeline cannot instance. Reject the model before librw dereferences
         // its MeshHeader; keep the diagnostic cube alive instead of crashing.
@@ -87,6 +93,7 @@ static bool krosaLoadDFFIfAvailable() {
         krosaLoadedClump = nullptr;
         return false;
     }
+    krosaDFFValidationStatus = 1;
     rw::V3d center = {0.0f, 0.0f, 0.0f};
     int count = 0;
     FORLIST(link, krosaLoadedClump->atomics) {
