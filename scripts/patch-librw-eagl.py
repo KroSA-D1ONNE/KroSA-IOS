@@ -55,6 +55,49 @@ edit("src/gl/gl3device.cpp", [
 ])
 
 edit("src/gl/gl3device.cpp", [
+    ('#else\nnot implemented\n#endif\n\nstatic int\ninitOpenGL(void)',
+     '#elif defined(LIBRW_EAGL)\nstatic int stopEAGL(void) { return 1; }\n#else\n#error "Unsupported GL3 host backend"\n#endif\n\nstatic int\ninitOpenGL(void)'),
+    ('#else\n\tnot implemented\n#endif\n};\n\n}\n}',
+     '''#elif defined(LIBRW_EAGL)
+    static int deviceSystemEAGL(DeviceReq req, void *arg, int32 n)
+    {
+        switch(req){
+        case DEVICEOPEN: return 1;
+        case DEVICECLOSE: return 1;
+        case DEVICEINIT: return initOpenGL();
+        case DEVICETERM: return termOpenGL() && stopEAGL();
+        case DEVICEFINALIZE: return finalizeOpenGL();
+        case DEVICEGETNUMSUBSYSTEMS: return 1;
+        case DEVICEGETCURRENTSUBSYSTEM: return 0;
+        case DEVICESETSUBSYSTEM: return n == 0;
+        case DEVICEGETNUMVIDEOMODES: return 1;
+        case DEVICEGETCURRENTVIDEOMODE: return 0;
+        case DEVICESETVIDEOMODE: return n == 0;
+        case DEVICEGETVIDEOMODEINFO: {
+            VideoMode *mode = (VideoMode*)arg;
+            mode->width = glGlobals.presentWidth;
+            mode->height = glGlobals.presentHeight;
+            mode->depth = 32;
+            mode->flags = 0;
+            return 1;
+        }
+        case DEVICEGETMAXMULTISAMPLINGLEVELS: return 1;
+        case DEVICEGETMULTISAMPLINGLEVELS: return 1;
+        case DEVICESETMULTISAMPLINGLEVELS: return n <= 1;
+        default: return 0;
+        }
+    }
+    gl3::deviceSystemEAGL
+#else
+#error "Unsupported GL3 host backend"
+#endif
+};
+
+}
+}''')
+])
+
+edit("src/gl/gl3device.cpp", [
     (
         '\tdefaultShader = Shader::create(vs, fs);\n\tassert(defaultShader);\n\tdefaultShader_noAT = Shader::create(vs, fs_noAT);\n\tassert(defaultShader_noAT);\n\n\tdefaultShader_fullLight = Shader::create(vs_fullLight, fs);\n\tassert(defaultShader_fullLight);\n\tdefaultShader_fullLight_noAT = Shader::create(vs_fullLight, fs_noAT);\n\tassert(defaultShader_fullLight_noAT);',
         '\tkrosaEAGLInitStatus = -31;\n\tdefaultShader = Shader::create(vs, fs);\n\tif(!defaultShader) return 0;\n\tkrosaEAGLInitStatus = -32;\n\tdefaultShader_noAT = Shader::create(vs, fs_noAT);\n\tif(!defaultShader_noAT) return 0;\n\tkrosaEAGLInitStatus = -33;\n\tdefaultShader_fullLight = Shader::create(vs_fullLight, fs);\n\tif(!defaultShader_fullLight) return 0;\n\tkrosaEAGLInitStatus = -34;\n\tdefaultShader_fullLight_noAT = Shader::create(vs_fullLight, fs_noAT);\n\tif(!defaultShader_fullLight_noAT) return 0;\n\tkrosaEAGLInitStatus = -35;'
