@@ -49,8 +49,8 @@ edit("src/gl/rwgl3impl.h", [
 
 edit("src/gl/gl3device.cpp", [
     (
-        '\\tdefaultShader = Shader::create(vs, fs);\\n\\tassert(defaultShader);\\n\\tdefaultShader_noAT = Shader::create(vs, fs_noAT);\\n\\tassert(defaultShader_noAT);\\n\\n\\tdefaultShader_fullLight = Shader::create(vs_fullLight, fs);\\n\\tassert(defaultShader_fullLight);\\n\\tdefaultShader_fullLight_noAT = Shader::create(vs_fullLight, fs_noAT);\\n\\tassert(defaultShader_fullLight_noAT);',
-        '\\tkrosaEAGLInitStatus = -31;\\n\\tdefaultShader = Shader::create(vs, fs);\\n\\tif(!defaultShader) return 0;\\n\\tkrosaEAGLInitStatus = -32;\\n\\tdefaultShader_noAT = Shader::create(vs, fs_noAT);\\n\\tif(!defaultShader_noAT) return 0;\\n\\tkrosaEAGLInitStatus = -33;\\n\\tdefaultShader_fullLight = Shader::create(vs_fullLight, fs);\\n\\tif(!defaultShader_fullLight) return 0;\\n\\tkrosaEAGLInitStatus = -34;\\n\\tdefaultShader_fullLight_noAT = Shader::create(vs_fullLight, fs_noAT);\\n\\tif(!defaultShader_fullLight_noAT) return 0;\\n\\tkrosaEAGLInitStatus = -35;'
+        '\tdefaultShader = Shader::create(vs, fs);\n\tassert(defaultShader);\n\tdefaultShader_noAT = Shader::create(vs, fs_noAT);\n\tassert(defaultShader_noAT);\n\n\tdefaultShader_fullLight = Shader::create(vs_fullLight, fs);\n\tassert(defaultShader_fullLight);\n\tdefaultShader_fullLight_noAT = Shader::create(vs_fullLight, fs_noAT);\n\tassert(defaultShader_fullLight_noAT);',
+        '\tkrosaEAGLInitStatus = -31;\n\tdefaultShader = Shader::create(vs, fs);\n\tif(!defaultShader) return 0;\n\tkrosaEAGLInitStatus = -32;\n\tdefaultShader_noAT = Shader::create(vs, fs_noAT);\n\tif(!defaultShader_noAT) return 0;\n\tkrosaEAGLInitStatus = -33;\n\tdefaultShader_fullLight = Shader::create(vs_fullLight, fs);\n\tif(!defaultShader_fullLight) return 0;\n\tkrosaEAGLInitStatus = -34;\n\tdefaultShader_fullLight_noAT = Shader::create(vs_fullLight, fs_noAT);\n\tif(!defaultShader_fullLight_noAT) return 0;\n\tkrosaEAGLInitStatus = -35;'
     )
 ])
 
