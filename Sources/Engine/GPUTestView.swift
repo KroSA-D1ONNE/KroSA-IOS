@@ -126,6 +126,7 @@ private struct GLES2TextureView: UIViewRepresentable {
         context.coordinator.onContextValidated = onContextValidated
         context.coordinator.onGL3Initialized = onGL3Initialized
         context.coordinator.onGeometryDrawn = onGeometryDrawn
+        context.coordinator.onDiagnostics = onDiagnostics
 
         #if targetEnvironment(simulator)
         // The hosted macOS simulator crashes in its GLKit/GLES dispatch (null function
