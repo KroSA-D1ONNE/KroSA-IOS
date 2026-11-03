@@ -379,7 +379,7 @@ private struct GLES2TextureView: UIViewRepresentable {
 
             // Re-render librw with the current touch-controlled camera.
             // RenderWare's device and GL3 shaders remain alive between frames.
-            let dffPath = GameFilesDirectory.url.appendingPathComponent("models/hotring.dff").path
+            let dffPath = GameFilesDirectory.url.appendingPathComponent("models/infernus.dff").path
             dffPath.withCString { krosaLibrwGL3SetDFFPath($0) }
             let result = krosaLibrwGL3GeometrySmokeTest(
                 drawableWidth, drawableHeight, cameraYaw, cameraPitch, cameraDistance
