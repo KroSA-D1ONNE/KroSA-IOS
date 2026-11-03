@@ -62,6 +62,7 @@ struct GPUTestView: View {
                     statusLine(nativeGLStatus)
                     statusLine(librwGL3Status)
                     statusLine(geometryStatus)
+                    Text(diagnosticsStatus)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(13)
