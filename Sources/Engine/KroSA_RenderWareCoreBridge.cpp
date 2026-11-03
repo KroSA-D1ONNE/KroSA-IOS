@@ -45,8 +45,7 @@ static bool krosaLoadDFFIfAvailable() {
     int count = 0;
     FORLIST(link, krosaLoadedClump->atomics) {
         rw::Atomic *atomic = rw::Atomic::fromClump(link);
-        atomic->pipeline = rw::gl3::makeDefaultPipeline();
-        if (atomic->pipeline) atomic->pipeline->addRef();
+        atomic->pipeline = krosaScenePipeline;
         rw::Sphere *sphere = atomic->getWorldBoundingSphere();
         center = rw::add(center, sphere->center);
         ++count;
