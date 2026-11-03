@@ -63,6 +63,17 @@ struct GPUTestView: View {
                     statusLine(librwGL3Status)
                     statusLine(geometryStatus)
                     Text(diagnosticsStatus)
+                        .font(.system(size: 9, weight: .medium, design: .monospaced))
+                        .textSelection(.enabled)
+                    Button {
+                        UIPasteboard.general.string = diagnosticsStatus
+                    } label: {
+                        Label("COPIAR DIAGNÓSTICO", systemImage: "doc.on.doc")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.green)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                    .disabled(diagnosticsStatus == "MÉTRICAS LIBRW: ESPERANDO FRAME")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(13)
@@ -182,11 +193,9 @@ private struct GLES2TextureView: UIViewRepresentable {
     static func dismantleUIView(_ uiView: UIView, coordinator: Renderer) {
         #if !targetEnvironment(simulator)
         coordinator.stopRendering()
-        if let glContext = coordinator.glContext {
-            _ = EAGLContext.setCurrent(glContext)
-            krosaLibrwGL3Shutdown()
-            EAGLContext.setCurrent(nil)
-        }
+        // Avoid Engine::stop() during SwiftUI dismantling. On device, librw
+        // GL3 closeIm3D() currently crashes in Shader::destroy() with a null
+        // dereference. Keep the engine alive until its teardown is repaired.
         #endif
     }
 
