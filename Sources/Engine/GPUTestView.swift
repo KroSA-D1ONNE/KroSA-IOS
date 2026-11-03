@@ -9,6 +9,7 @@ struct GPUTestView: View {
     @State private var nativeGLStatus = "EAGL + GLES2 SHADER AISLADO"
     @State private var librwGL3Status = "LIBRW GL3: NO EJECUTADO"
     @State private var geometryStatus = "TRIÁNGULO GLES2: EN PRUEBA"
+    @State private var diagnosticsStatus = "MÉTRICAS LIBRW: ESPERANDO FRAME"
     @State private var showLibrwTest = false
 
     var body: some View {
