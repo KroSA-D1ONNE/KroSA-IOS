@@ -303,10 +303,16 @@ edit("src/gl/gl3render.cpp", [
 ])
 
 
-# Capture the real TXD raster upload, not just its later GL binding.
+# Trace TXD raster creation, CPU locking, and actual GPU upload separately.
 edit("src/gl/gl3raster.cpp", [
     ('namespace gl3 {',
-     'namespace gl3 {\nstatic int krosaUploadWidth=-1, krosaUploadHeight=-1, krosaUploadFormat=-1, krosaUploadError=-1;\nextern "C" void krosaGetRasterUploadDiagnostics(int *w,int *h,int *format,int *error) { if(w)*w=krosaUploadWidth; if(h)*h=krosaUploadHeight; if(format)*format=krosaUploadFormat; if(error)*error=krosaUploadError; }'),
-    ('\t\t\t\t\t     0, natras->format, natras->type, raster->pixels);',
-     '\t\t\t\t\t     0, natras->format, natras->type, raster->pixels);\n\t\t\t\tif(level == 0){ krosaUploadWidth=raster->width; krosaUploadHeight=raster->height; krosaUploadFormat=natras->internalFormat; krosaUploadError=glGetError(); }')
+     'namespace gl3 {\\nstatic int krosaRasterCreateCount=0, krosaRasterLockCount=0, krosaRasterUnlockCount=0;\\nstatic int krosaUploadWidth=-1, krosaUploadHeight=-1, krosaUploadFormat=-1, krosaUploadError=-1;\\nextern "C" void krosaGetRasterUploadDiagnostics(int *w,int *h,int *format,int *error,int *created,int *locked,int *unlocked) { if(w)*w=krosaUploadWidth; if(h)*h=krosaUploadHeight; if(format)*format=krosaUploadFormat; if(error)*error=krosaUploadError; if(created)*created=krosaRasterCreateCount; if(locked)*locked=krosaRasterLockCount; if(unlocked)*unlocked=krosaRasterUnlockCount; }'),
+    ('rasterCreateTexture(Raster *raster)\\n{',
+     'rasterCreateTexture(Raster *raster)\\n{\\n\\tkrosaRasterCreateCount++; krosaUploadWidth=raster->width; krosaUploadHeight=raster->height; krosaUploadFormat=raster->format;'),
+    ('rasterLock(Raster *raster, int32 level, int32 lockMode)\\n{',
+     'rasterLock(Raster *raster, int32 level, int32 lockMode)\\n{\\n\\tkrosaRasterLockCount++;'),
+    ('rasterUnlock(Raster *raster, int32 level)\\n{',
+     'rasterUnlock(Raster *raster, int32 level)\\n{\\n\\tkrosaRasterUnlockCount++;'),
+    ('raster->pixels);\\n\\t\\t\\t}',
+     'raster->pixels);\\n\\t\\t\\t\\tif(level == 0){ krosaUploadWidth=raster->width; krosaUploadHeight=raster->height; krosaUploadFormat=natras->internalFormat; krosaUploadError=glGetError(); }\\n\\t\\t\\t}')
 ])
