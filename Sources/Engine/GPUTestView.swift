@@ -34,7 +34,8 @@ struct GPUTestView: View {
                     GLES2TextureView(
                         onContextValidated: { ok in nativeGLStatus = ok ? "EAGL CONTEXTO: OK" : "EAGL CONTEXTO: ERROR" },
                         onGL3Initialized: { status in librwGL3Status = "LIBRW GL3 INIT: \(status)" },
-                        onGeometryDrawn: { result in geometryStatus = "LIBRW DRAW: \(result)" }
+                        onGeometryDrawn: { result in geometryStatus = "LIBRW DRAW: \(result)" },
+                        onDiagnostics: { diagnosticsStatus = $0 }
                     )
                         .frame(maxWidth: .infinity)
                         .frame(height: 300)
