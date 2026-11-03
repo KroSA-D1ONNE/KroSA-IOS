@@ -76,7 +76,7 @@ edit("src/gl/gl3device.cpp", [
      '\tkrosaEAGLInitStatus = -31;\n\tdefaultShader = Shader::create(vs, fs);\n\tif(!defaultShader) return 0;\n\tkrosaEAGLInitStatus = -32;\n\tdefaultShader_noAT = Shader::create(vs, fs_noAT);\n\tif(!defaultShader_noAT) return 0;\n\tkrosaEAGLInitStatus = -33;\n\tdefaultShader_fullLight = Shader::create(vs_fullLight, fs);\n\tif(!defaultShader_fullLight) return 0;\n\tkrosaEAGLInitStatus = -34;\n\tdefaultShader_fullLight_noAT = Shader::create(vs_fullLight, fs_noAT);\n\tif(!defaultShader_fullLight_noAT) return 0;\n\tkrosaEAGLInitStatus = -35;')
 ])
 
-# Expose the exact failure stage inside Shader::create(). -311 = vertex compile,
+# Keep the failing GLSL stage separately; init status is overwritten with 2 on success.\n# 0=none, 1=vertex compile, 2=fragment compile, 3=program link.\n# Expose the exact failure stage inside Shader::create(). -311 = vertex compile,
 # -312 = fragment compile, -313 = program link. This keeps the on-device probe
 # useful without requiring access to the iOS device console.
 edit("src/gl/gl3device.cpp", [
@@ -85,7 +85,7 @@ edit("src/gl/gl3device.cpp", [
 ])
 
 edit("src/gl/gl3shader.cpp", [
-    ('namespace gl3 {\n', 'namespace gl3 {\n\nstatic char krosaEAGLShaderError[2048] = {0};\nextern "C" void krosaSetEAGLShaderStatus(int status);\nextern "C" const char *krosaGetEAGLShaderError(void) { return krosaEAGLShaderError; }\n'),
+    ('namespace gl3 {\n', 'namespace gl3 {\n\nstatic char krosaEAGLShaderError[2048] = {0};\nstatic int krosaEAGLShaderStage = 0;\nextern "C" void krosaSetEAGLShaderStatus(int status);\nextern "C" const char *krosaGetEAGLShaderError(void) { return krosaEAGLShaderError; }\nextern "C" int krosaGetEAGLShaderStage(void) { return krosaEAGLShaderStage; }\n'),
     ('GLint len;\n\tchar *log;\n\n\tfor(n = 0; src[n]; n++);',
      'GLint len;\n\tchar *log;\n\tkrosaEAGLShaderError[0] = 0;\n\n\tfor(n = 0; src[n]; n++);'),
     ('glGetShaderInfoLog(shdr, len, nil, log);',
@@ -93,9 +93,9 @@ edit("src/gl/gl3shader.cpp", [
     ('glGetProgramInfoLog(prog, len, nil, log);',
      'glGetProgramInfoLog(prog, len, nil, log);\n\t\tsnprintf(krosaEAGLShaderError, sizeof(krosaEAGLShaderError), "%s", log);'),
     ('if(!success){\n\t\tprintShaderSource(src);',
-     'if(!success){\n\t\tkrosaSetEAGLShaderStatus(type == GL_VERTEX_SHADER ? -311 : -312);\n\t\tprintShaderSource(src);'),
+     'if(!success){\n\t\tkrosaEAGLShaderStage = type == GL_VERTEX_SHADER ? 1 : 2;\n\t\tkrosaSetEAGLShaderStatus(type == GL_VERTEX_SHADER ? -311 : -312);\n\t\tprintShaderSource(src);'),
     ('if(!success){\n\t\tfprintf(stderr, "Error in program\\n");',
-     'if(!success){\n\t\tkrosaSetEAGLShaderStatus(-313);\n\t\tfprintf(stderr, "Error in program\\n");')
+     'if(!success){\n\t\tkrosaEAGLShaderStage = 3;\n\t\tkrosaSetEAGLShaderStatus(-313);\n\t\tfprintf(stderr, "Error in program\\n");')
 ])
 
 edit("src/engine.cpp", [
