@@ -143,6 +143,8 @@ extern "C" void krosaLibrwGL3Shutdown(void) {
         krosaSceneFrame->destroy();
         krosaSceneFrame = nullptr;
     }
+    if (rw::engine && rw::engine->currentWorld == krosaSceneWorld)
+        rw::engine->currentWorld = nullptr;
     if (krosaSceneWorld) {
         krosaSceneWorld->destroy();
         krosaSceneWorld = nullptr;
@@ -332,6 +334,7 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
                 krosaSceneFrame = rw::Frame::create();
                 krosaSceneAtomic = rw::Atomic::create();
                 krosaSceneWorld = rw::World::create(nullptr);
+                if (rw::engine) rw::engine->currentWorld = krosaSceneWorld;
                 krosaScenePipeline = rw::gl3::makeDefaultPipeline();
                 if (krosaSceneFrame && krosaSceneAtomic && krosaSceneWorld && krosaScenePipeline && geometry->meshHeader) {
                     krosaSceneAtomic->setFrame(krosaSceneFrame);
@@ -354,6 +357,7 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
                 krosaSceneAtomic->destroy(); krosaSceneAtomic = nullptr;
             }
             if (krosaSceneFrame) { krosaSceneFrame->destroy(); krosaSceneFrame = nullptr; }
+            if (rw::engine && rw::engine->currentWorld == krosaSceneWorld) rw::engine->currentWorld = nullptr;
             if (krosaSceneWorld) { krosaSceneWorld->destroy(); krosaSceneWorld = nullptr; }
             if (krosaScenePipeline) { krosaScenePipeline->destroy(); krosaScenePipeline = nullptr; }
             return -6;
