@@ -16,6 +16,7 @@ extern "C" int krosaGetGL3DrawViewport(int);
 static int krosaLastGeometryDrawFlags = 0;
 static int krosaLastGeometryInitStatus = 0;
 static rw::Frame *krosaSceneFrame = nullptr;
+static rw::World *krosaSceneWorld = nullptr;
 static rw::Atomic *krosaSceneAtomic = nullptr;
 static rw::gl3::ObjPipeline *krosaScenePipeline = nullptr;
 static bool krosaSceneReady = false;
@@ -128,14 +129,23 @@ static bool krosaLoadDFFIfAvailable() {
 
 extern "C" void krosaLibrwGL3Shutdown(void) {
     // Called by UIViewRepresentable dismantling with the creating EAGL context current.
-    if (krosaLoadedClump) { krosaLoadedClump->destroy(); krosaLoadedClump = nullptr; }
+    if (krosaLoadedClump) {
+        if (krosaSceneWorld && krosaLoadedClump->world == krosaSceneWorld) krosaSceneWorld->removeClump(krosaLoadedClump);
+        krosaLoadedClump->destroy();
+        krosaLoadedClump = nullptr;
+    }
     if (krosaSceneAtomic) {
+        if (krosaSceneWorld && krosaSceneAtomic->world == krosaSceneWorld) krosaSceneWorld->removeAtomic(krosaSceneAtomic);
         krosaSceneAtomic->destroy();
         krosaSceneAtomic = nullptr;
     }
     if (krosaSceneFrame) {
         krosaSceneFrame->destroy();
         krosaSceneFrame = nullptr;
+    }
+    if (krosaSceneWorld) {
+        krosaSceneWorld->destroy();
+        krosaSceneWorld = nullptr;
     }
     if (krosaScenePipeline) {
         krosaScenePipeline->destroy();
@@ -321,13 +331,15 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
 
                 krosaSceneFrame = rw::Frame::create();
                 krosaSceneAtomic = rw::Atomic::create();
+                krosaSceneWorld = rw::World::create(nullptr);
                 krosaScenePipeline = rw::gl3::makeDefaultPipeline();
-                if (krosaSceneFrame && krosaSceneAtomic && krosaScenePipeline && geometry->meshHeader) {
+                if (krosaSceneFrame && krosaSceneAtomic && krosaSceneWorld && krosaScenePipeline && geometry->meshHeader) {
                     krosaSceneAtomic->setFrame(krosaSceneFrame);
                     krosaSceneAtomic->setGeometry(geometry, 0);
                     geometry->destroy(); // Atomic owns its retained geometry reference.
                     geometry = nullptr;
                     krosaSceneAtomic->pipeline = krosaScenePipeline;
+                    krosaSceneWorld->addAtomic(krosaSceneAtomic);
                     built = true;
                 }
             }
@@ -337,14 +349,20 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
         if (geometry) geometry->destroy();
         krosaSceneReady = built;
         if (!krosaSceneReady) {
-            if (krosaSceneAtomic) { krosaSceneAtomic->destroy(); krosaSceneAtomic = nullptr; }
+            if (krosaSceneAtomic) {
+                if (krosaSceneWorld && krosaSceneAtomic->world == krosaSceneWorld) krosaSceneWorld->removeAtomic(krosaSceneAtomic);
+                krosaSceneAtomic->destroy(); krosaSceneAtomic = nullptr;
+            }
             if (krosaSceneFrame) { krosaSceneFrame->destroy(); krosaSceneFrame = nullptr; }
+            if (krosaSceneWorld) { krosaSceneWorld->destroy(); krosaSceneWorld = nullptr; }
             if (krosaScenePipeline) { krosaScenePipeline->destroy(); krosaScenePipeline = nullptr; }
             return -6;
         }
     }
 
     krosaLoadDFFIfAvailable();
+    if (krosaLoadedClump && krosaSceneWorld && krosaLoadedClump->world == nullptr)
+        krosaSceneWorld->addClump(krosaLoadedClump);
 
     const float aspect = float(width) / float(height);
     const float f = 1.0f / 0.57735026919f;
