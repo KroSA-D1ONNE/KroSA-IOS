@@ -76,6 +76,22 @@ edit("src/gl/gl3device.cpp", [
      '\tkrosaEAGLInitStatus = -31;\n\tdefaultShader = Shader::create(vs, fs);\n\tif(!defaultShader) return 0;\n\tkrosaEAGLInitStatus = -32;\n\tdefaultShader_noAT = Shader::create(vs, fs_noAT);\n\tif(!defaultShader_noAT) return 0;\n\tkrosaEAGLInitStatus = -33;\n\tdefaultShader_fullLight = Shader::create(vs_fullLight, fs);\n\tif(!defaultShader_fullLight) return 0;\n\tkrosaEAGLInitStatus = -34;\n\tdefaultShader_fullLight_noAT = Shader::create(vs_fullLight, fs_noAT);\n\tif(!defaultShader_fullLight_noAT) return 0;\n\tkrosaEAGLInitStatus = -35;')
 ])
 
+# Expose the exact failure stage inside Shader::create(). -311 = vertex compile,
+# -312 = fragment compile, -313 = program link. This keeps the on-device probe
+# useful without requiring access to the iOS device console.
+edit("src/gl/gl3device.cpp", [
+    ('extern "C" int krosaGetEAGLInitStatus(void) { return krosaEAGLInitStatus; }',
+     'extern "C" int krosaGetEAGLInitStatus(void) { return krosaEAGLInitStatus; }\\nextern "C" void krosaSetEAGLShaderStatus(int status) { krosaEAGLInitStatus = status; }')
+])
+
+edit("src/gl/gl3shader.cpp", [
+    ('namespace gl3 {\\n', 'namespace gl3 {\\n\\nextern "C" void krosaSetEAGLShaderStatus(int status);\\n'),
+    ('if(!success){\\n\\t\\tprintShaderSource(src);',
+     'if(!success){\\n\\t\\tkrosaSetEAGLShaderStatus(type == GL_VERTEX_SHADER ? -311 : -312);\\n\\t\\tprintShaderSource(src);'),
+    ('if(!success){\\n\\t\\tfprintf(stderr, "Error in program\\\\n");',
+     'if(!success){\\n\\t\\tkrosaSetEAGLShaderStatus(-313);\\n\\t\\tfprintf(stderr, "Error in program\\\\n");')
+])
+
 edit("src/engine.cpp", [
     ('\tengine->device.system(DEVICEOPEN, (void*)p, 0);\n\n\tengine->dummyDefaultPipeline = ObjPipeline::create();',
      '\tif(!engine->device.system(DEVICEOPEN, (void*)p, 0)){\n\t\trwFree(engine);\n\t\tengine = nil;\n\t\treturn 0;\n\t}\n\n\tengine->dummyDefaultPipeline = ObjPipeline::create();'),
