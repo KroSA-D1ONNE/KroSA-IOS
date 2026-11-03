@@ -439,7 +439,12 @@ private struct GLES2TextureView: UIViewRepresentable {
             var dxtBytes: Int32 = -1, dxtError: Int32 = -1, dxtUploads: Int32 = 0
             krosaGetDXTDiagnostics(&dxtSupported, &dxtSeen, &dxtRejected, &dxtFormat, &dxtLevels, &dxtWidth, &dxtHeight, &dxtBytes, &dxtError, &dxtUploads)
             let dxtReport = "DXT:SUP:\(dxtSupported)/SEEN:\(dxtSeen)/REJECT:\(dxtRejected) FMT:\(dxtFormat) LVL:\(dxtLevels) SIZE:\(dxtWidth)x\(dxtHeight) UPLOAD:\(dxtUploads)/\(dxtBytes)B/ERR:\(dxtError) "
-            let report = "EAGL:\(eaglStatus) DFF:\(dffStatus) TXD:\(txdPaths)/\(txdOpened)/\(txdChunks)/\(txdDicts)/\(txdTextures) MAT:\(materialCount)/\(materialTextures)/\(materialRasters)/\(materialDictMatches) \(materialReport) \(texturePathReport)\(rasterUploadReport)\(dxtReport)FLAGS:\(flags) MESH:\(metrics[3]) IDX:\(metrics[0]) VTX:\(metrics[2])\nPIXELS:\(metrics[5]) BOX:\(metrics[6]),\(metrics[7])-\(metrics[8]),\(metrics[9]) BLUE:\(metrics[10])\nFBO:\(framebuffer) VP:\(viewport)\nSHADER_STAGE: \(shaderStage) (0=none,1=vertex,2=fragment,3=link)\nSHADER: \(shaderError)"
+
+            var nativeReads: Int32 = 0, imageCalls: Int32 = 0, nativeFormat: Int32 = -1
+            var nativeWidth: Int32 = -1, nativeHeight: Int32 = -1, nativeLevels: Int32 = -1
+            krosaGetTextureIngestDiagnostics(&nativeReads, &imageCalls, &nativeFormat, &nativeWidth, &nativeHeight, &nativeLevels)
+            let ingestReport = "INGEST:NATIVE:\(nativeReads)/IMAGE:\(imageCalls) FMT:\(nativeFormat) SIZE:\(nativeWidth)x\(nativeHeight) LVL:\(nativeLevels) "
+            let report = "EAGL:\(eaglStatus) DFF:\(dffStatus) TXD:\(txdPaths)/\(txdOpened)/\(txdChunks)/\(txdDicts)/\(txdTextures) MAT:\(materialCount)/\(materialTextures)/\(materialRasters)/\(materialDictMatches) \(materialReport) \(texturePathReport)\(rasterUploadReport)\(dxtReport)\(ingestReport)FLAGS:\(flags) MESH:\(metrics[3]) IDX:\(metrics[0]) VTX:\(metrics[2])\nPIXELS:\(metrics[5]) BOX:\(metrics[6]),\(metrics[7])-\(metrics[8]),\(metrics[9]) BLUE:\(metrics[10])\nFBO:\(framebuffer) VP:\(viewport)\nSHADER_STAGE: \(shaderStage) (0=none,1=vertex,2=fragment,3=link)\nSHADER: \(shaderError)"
             if lastDiagnosticsReport != report {
                 lastDiagnosticsReport = report
                 DispatchQueue.main.async { [weak self] in self?.onDiagnostics?(report) }
