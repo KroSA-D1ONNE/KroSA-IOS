@@ -225,3 +225,20 @@ edit("src/gl/gl3render.cpp", [
     ("\t\tdrawInst(header, inst);\n\t\t// Single-pixel diagnostic only; full-frame readbacks stall the iPhone GPU.",
      "\t\tdrawInst(header, inst);\n\t\tif(program){ GLint fogLocation = glGetUniformLocation((GLuint)program, \"u_fogColor\"); if(fogLocation >= 0) glGetUniformfv((GLuint)program, fogLocation, krosaGL3FogUniform); }\n\t\t// Single-pixel diagnostic only; full-frame readbacks stall the iPhone GPU.")
 ])
+
+# OpenGL ES 2 shader compilers on some iOS devices reject the dynamic
+# uniform-array light loop in this vertex shader. Keep this diagnostic
+# renderer unlit until the base EAGL shader pipeline is confirmed.
+p = ROOT / "src/gl/shaders/header_vs.inc"
+s = p.read_text()
+start = s.find('"vec3 DoDynamicLight(vec3 V, vec3 N)\\n"')
+end = s.find('"float DoFog(float w)\\n"', start)
+if start < 0 or end < 0 or end <= start:
+    raise SystemExit("header_vs.inc: cannot isolate DoDynamicLight")
+s = s[:start] + (
+    '"vec3 DoDynamicLight(vec3 V, vec3 N)\\n"\n'
+    '"{\\n"\n'
+    '"\\treturn vec3(0.0);\\n"\n'
+    '"}\\n"\n\n'
+) + s[end:]
+p.write_text(s)
