@@ -423,7 +423,11 @@ private struct GLES2TextureView: UIViewRepresentable {
             let eaglStatus = krosaGetLastEAGLInitStatus()
             let shaderStage = krosaGetEAGLShaderStage()
             let shaderError = String(cString: krosaGetEAGLShaderError())
-            let report = "EAGL:\(eaglStatus) DFF:\(dffStatus) TXD:\(txdPaths)/\(txdOpened)/\(txdChunks)/\(txdDicts)/\(txdTextures) FLAGS:\(flags) MESH:\(metrics[3]) IDX:\(metrics[0]) VTX:\(metrics[2])\\nPIXELS:\(metrics[5]) BOX:\(metrics[6]),\(metrics[7])-\(metrics[8]),\(metrics[9]) BLUE:\(metrics[10])\\nFBO:\(framebuffer) VP:\(viewport)\\nSHADER_STAGE: \(shaderStage) (0=none,1=vertex,2=fragment,3=link)\\nSHADER: \(shaderError)"
+            var materialCount: Int32 = 0, materialTextures: Int32 = 0, materialRasters: Int32 = 0, materialDictMatches: Int32 = 0
+            var materialBuffer = [CChar](repeating: 0, count: 160)
+            krosaGetMaterialDiagnostics(&materialCount, &materialTextures, &materialRasters, &materialDictMatches, &materialBuffer, Int32(materialBuffer.count))
+            let materialReport = String(cString: materialBuffer)
+            let report = "EAGL:\(eaglStatus) DFF:\(dffStatus) TXD:\(txdPaths)/\(txdOpened)/\(txdChunks)/\(txdDicts)/\(txdTextures) MAT:\(materialCount)/\(materialTextures)/\(materialRasters)/\(materialDictMatches) \(materialReport) FLAGS:\(flags) MESH:\(metrics[3]) IDX:\(metrics[0]) VTX:\(metrics[2])\\nPIXELS:\(metrics[5]) BOX:\(metrics[6]),\(metrics[7])-\(metrics[8]),\(metrics[9]) BLUE:\(metrics[10])\\nFBO:\(framebuffer) VP:\(viewport)\\nSHADER_STAGE: \(shaderStage) (0=none,1=vertex,2=fragment,3=link)\\nSHADER: \(shaderError)"
             if lastDiagnosticsReport != report {
                 lastDiagnosticsReport = report
                 DispatchQueue.main.async { [weak self] in self?.onDiagnostics?(report) }
