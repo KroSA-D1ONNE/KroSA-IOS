@@ -48,7 +48,8 @@ enum GameFilesDirectory {
             .map(\.path) ?? []
         return files.joined(separator: "\n")
     }()
-\n    static var path: String {
+
+    static var path: String {
         url.path
     }
 }
