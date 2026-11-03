@@ -36,6 +36,7 @@ extern "C" void krosaLibrwGL3SetDFFPath(const char *path) {
 
 static int krosaDFFValidationStatus = 0;
 static int krosaTXDValidationStatus = 0;
+static int krosaTXDPathCount = 0, krosaTXDOpenCount = 0, krosaTXDChunkCount = 0, krosaTXDTextureCount = 0;
 
 extern "C" void krosaLibrwGL3SetTXDPaths(const char *paths) {
     if (!paths) { krosaTXDPaths[0] = 0; return; }
@@ -54,14 +55,18 @@ static bool krosaLoadTXDsIfAvailable() {
     std::strncpy(paths, krosaTXDPaths, sizeof(paths) - 1);
     paths[sizeof(paths) - 1] = 0;
     int loaded = 0;
+    krosaTXDPathCount = krosaTXDOpenCount = krosaTXDChunkCount = krosaTXDTextureCount = 0;
     char *path = paths;
     while (*path) {
         char *end = std::strchr(path, '\n');
         if (end) *end = 0;
         if (*path) {
+            ++krosaTXDPathCount;
             rw::StreamFile stream;
             if (stream.open(path, "rb")) {
+                ++krosaTXDOpenCount;
                 const bool hasTXDChunk = rw::findChunk(&stream, rw::ID_TEXDICTIONARY, nullptr, nullptr);
+                if (hasTXDChunk) ++krosaTXDChunkCount;
                 rw::TexDictionary *dictionary = hasTXDChunk ? rw::TexDictionary::streamRead(&stream) : nullptr;
                 stream.close();
                 if (dictionary) {
@@ -69,6 +74,7 @@ static bool krosaLoadTXDsIfAvailable() {
                         rw::Texture *texture = rw::Texture::fromDict(dictionary->textures.link.next);
                         dictionary->remove(texture);
                         krosaLoadedTXD->add(texture);
+                        ++krosaTXDTextureCount;
                     }
                     dictionary->destroy();
                     ++loaded;
@@ -118,6 +124,14 @@ static int krosaClumpGL3Failure(rw::Clump *clump) {
         ++atomicIndex;
     }
     return 0;
+}
+
+extern "C" void krosaGetTXDDiagnostics(int *paths, int *opened, int *chunks, int *dicts, int *textures) {
+    if (paths) *paths = krosaTXDPathCount;
+    if (opened) *opened = krosaTXDOpenCount;
+    if (chunks) *chunks = krosaTXDChunkCount;
+    if (dicts) *dicts = krosaTXDValidationStatus;
+    if (textures) *textures = krosaTXDTextureCount;
 }
 
 extern "C" int krosaGetLastDFFValidationStatus(void) {
