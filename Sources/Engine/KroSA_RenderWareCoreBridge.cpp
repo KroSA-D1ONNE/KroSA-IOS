@@ -83,6 +83,18 @@ static bool krosaLoadDFFIfAvailable() {
     stream.close();
     if (!hasClumpChunk) krosaDFFValidationStatus = -3;
     else if (!krosaLoadedClump) krosaDFFValidationStatus = -4;
+
+    // Streamed non-native geometries start without a MeshHeader in librw.
+    // Build their mesh data before validating or assigning the GL3 pipeline.
+    if (krosaLoadedClump) {
+        FORLIST(link, krosaLoadedClump->atomics) {
+            rw::Atomic *atomic = rw::Atomic::fromClump(link);
+            rw::Geometry *geometry = atomic ? atomic->geometry : nullptr;
+            if (geometry && !(geometry->flags & rw::Geometry::NATIVE))
+                geometry->unlock();
+        }
+    }
+
     const int validationFailure = krosaClumpGL3Failure(krosaLoadedClump);
     if (validationFailure != 0) {
         krosaDFFValidationStatus = validationFailure;
