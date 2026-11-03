@@ -3,6 +3,8 @@ options:
   bundleIdPrefix: com.krosa
   deploymentTarget:
     iOS: "15.1"
+  projectFormat: xcode15_3
+  xcodeVersion: "15.4"
   createIntermediateGroups: true
 settings:
   base:
@@ -10,10 +12,9 @@ settings:
     IPHONEOS_DEPLOYMENT_TARGET: "15.1"
     TARGETED_DEVICE_FAMILY: "1,2"
     GENERATE_INFOPLIST_FILE: YES
-    INFOPLIST_KEY_CFBundleDisplayName: KroSA
+    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "1.0"
     INFOPLIST_KEY_UILaunchScreen_Generation: YES
-    INFOPLIST_KEY_UIFileSharingEnabled: YES
-    INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: YES
     CODE_SIGN_STYLE: Automatic
     CLANG_CXX_LANGUAGE_STANDARD: "c++11"
     GCC_PREPROCESSOR_DEFINITIONS: "$(inherited) RW_GL3 LIBRW_EAGL"
@@ -25,9 +26,45 @@ targets:
     platform: iOS
     sources:
       - path: Sources
+    info:
+      path: Sources/App/Info.plist
+      properties:
+        CFBundleDisplayName: KroSA
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.krosa.ios
+        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "1.0"
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
         SWIFT_EMIT_LOC_STRINGS: YES
         SWIFT_OBJC_BRIDGING_HEADER: Sources/Engine/KroSABridgingHeader.h
+
+  KroSAUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/KroSAUITests
+    dependencies:
+      - target: KroSA
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.krosa.ios.uitests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  KroSA:
+    build:
+      targets:
+        KroSA: all
+    test:
+      config: Debug
+      targets:
+        - KroSAUITests
+    run:
+      config: Debug

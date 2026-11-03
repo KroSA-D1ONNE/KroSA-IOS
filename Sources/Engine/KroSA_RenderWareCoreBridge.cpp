@@ -1,9 +1,297 @@
 #include "KroSA_RenderWareCoreBridge.h"
 #include <dlfcn.h>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
 
 #define RW_GL3
 #define LIBRW_EAGL
 #include "rw.h"
+extern "C" int krosaGetEAGLInitStatus(void);
+
+extern "C" void krosaResetGL3DrawDiagnostics(void);
+extern "C" int krosaGetGL3DrawDiagnostics(void);
+extern "C" int krosaGetGL3DrawPixel(int);
+extern "C" int krosaGetGL3DrawFramebuffer(void);
+extern "C" int krosaGetGL3DrawViewport(int);
+static int krosaLastGeometryDrawFlags = 0;
+static int krosaLastGeometryInitStatus = 0;
+static rw::Frame *krosaSceneFrame = nullptr;
+static rw::World *krosaSceneWorld = nullptr;
+static rw::Light *krosaSceneAmbientLight = nullptr;
+static rw::Atomic *krosaSceneAtomic = nullptr;
+static rw::gl3::ObjPipeline *krosaScenePipeline = nullptr;
+static bool krosaSceneReady = false;
+static char krosaDFFPath[1024] = {0};
+static rw::Clump *krosaLoadedClump = nullptr;
+static rw::TexDictionary *krosaLoadedTXD = nullptr;
+static char krosaTXDPaths[8192] = {0};
+static float krosaLoadedClumpDistance = 3.2f;
+
+extern "C" void krosaLibrwGL3SetDFFPath(const char *path) {
+    if (!path) { krosaDFFPath[0] = 0; return; }
+    std::strncpy(krosaDFFPath, path, sizeof(krosaDFFPath) - 1);
+    krosaDFFPath[sizeof(krosaDFFPath) - 1] = 0;
+}
+
+static int krosaDFFValidationStatus = 0;
+static int krosaTXDValidationStatus = 0;
+static int krosaTXDPathCount = 0, krosaTXDOpenCount = 0, krosaTXDChunkCount = 0, krosaTXDTextureCount = 0;
+
+extern "C" void krosaLibrwGL3SetTXDPaths(const char *paths) {
+    if (!paths) { krosaTXDPaths[0] = 0; return; }
+    std::strncpy(krosaTXDPaths, paths, sizeof(krosaTXDPaths) - 1);
+    krosaTXDPaths[sizeof(krosaTXDPaths) - 1] = 0;
+}
+
+static bool krosaLoadTXDsIfAvailable() {
+    if (krosaLoadedTXD) {
+        rw::TexDictionary::setCurrent(krosaLoadedTXD);
+        return true;
+    }
+    krosaLoadedTXD = rw::TexDictionary::create();
+    if (!krosaLoadedTXD) { krosaTXDValidationStatus = -1; return false; }
+    char paths[sizeof(krosaTXDPaths)];
+    std::strncpy(paths, krosaTXDPaths, sizeof(paths) - 1);
+    paths[sizeof(paths) - 1] = 0;
+    int loaded = 0;
+    krosaTXDPathCount = krosaTXDOpenCount = krosaTXDChunkCount = krosaTXDTextureCount = 0;
+    char *path = paths;
+    while (*path) {
+        char *end = std::strchr(path, '\n');
+        if (end) *end = 0;
+        if (*path) {
+            ++krosaTXDPathCount;
+            rw::StreamFile stream;
+            if (stream.open(path, "rb")) {
+                ++krosaTXDOpenCount;
+                const bool hasTXDChunk = rw::findChunk(&stream, rw::ID_TEXDICTIONARY, nullptr, nullptr);
+                if (hasTXDChunk) ++krosaTXDChunkCount;
+                rw::TexDictionary *dictionary = hasTXDChunk ? rw::TexDictionary::streamRead(&stream) : nullptr;
+                stream.close();
+                if (dictionary) {
+                    while (!dictionary->textures.isEmpty()) {
+                        rw::Texture *texture = rw::Texture::fromDict(dictionary->textures.link.next);
+                        dictionary->remove(texture);
+                        krosaLoadedTXD->add(texture);
+                        ++krosaTXDTextureCount;
+                    }
+                    dictionary->destroy();
+                    ++loaded;
+                }
+            }
+        }
+        if (!end) break;
+        path = end + 1;
+    }
+    rw::TexDictionary::setCurrent(krosaLoadedTXD);
+    krosaTXDValidationStatus = loaded;
+    return true;
+}
+
+// Positive codes identify the exact rejected field; 1000+ encodes
+// atomicIndex*100 + geometryFailure so the device can report which atomic failed.
+static int krosaGeometryGL3Failure(const rw::Geometry *geometry) {
+    if (!geometry) return 1;
+    if (geometry->flags & rw::Geometry::NATIVE) return 2;
+    if (!geometry->meshHeader) return 3;
+    if (geometry->numVertices <= 0) return 4;
+    if (geometry->numMorphTargets <= 0 || !geometry->morphTargets) return 5;
+    if (!geometry->morphTargets[0].vertices) return 6;
+    if (geometry->meshHeader->numMeshes == 0) return 7;
+    if (geometry->meshHeader->totalIndices == 0) return 8;
+    const rw::Mesh *meshes = geometry->meshHeader->getMeshes();
+    if (!meshes) return 9;
+    for (uint32_t i = 0; i < geometry->meshHeader->numMeshes; ++i) {
+        const rw::Mesh &mesh = meshes[i];
+        if (!mesh.indices) return 10;
+        if (mesh.numIndices == 0) return 11;
+        if (!mesh.material) return 12;
+        for (uint32_t j = 0; j < mesh.numIndices; ++j)
+            if (mesh.indices[j] >= geometry->numVertices) return 13;
+    }
+    return 0;
+}
+
+static int krosaClumpGL3Failure(rw::Clump *clump) {
+    if (!clump) return 20;
+    if (clump->countAtomics() == 0) return 21;
+    int atomicIndex = 0;
+    FORLIST(link, clump->atomics) {
+        rw::Atomic *atomic = rw::Atomic::fromClump(link);
+        const int failure = atomic ? krosaGeometryGL3Failure(atomic->geometry) : 22;
+        if (failure) return 1000 + atomicIndex * 100 + failure;
+        ++atomicIndex;
+    }
+    return 0;
+}
+
+
+static int krosaMaterialCount = 0;
+static int krosaMaterialTextureCount = 0;
+static int krosaMaterialRasterCount = 0;
+static int krosaMaterialMatchedTXDCount = 0;
+static char krosaMaterialReport[512] = {0};
+
+static void krosaInspectMaterials(rw::Clump *clump) {
+    krosaMaterialCount = krosaMaterialTextureCount = krosaMaterialRasterCount = krosaMaterialMatchedTXDCount = 0;
+    krosaMaterialReport[0] = 0;
+    if (!clump) return;
+    FORLIST(link, clump->atomics) {
+        rw::Atomic *atomic = rw::Atomic::fromClump(link);
+        rw::Geometry *geometry = atomic ? atomic->geometry : nullptr;
+        if (!geometry || !geometry->meshHeader) continue;
+        const rw::Mesh *meshes = geometry->meshHeader->getMeshes();
+        for (uint32_t i = 0; i < geometry->meshHeader->numMeshes; ++i) {
+            rw::Material *material = meshes[i].material;
+            if (!material) continue;
+            ++krosaMaterialCount;
+            rw::Texture *texture = material->texture;
+            if (!texture) continue;
+            ++krosaMaterialTextureCount;
+            if (texture->raster) ++krosaMaterialRasterCount;
+            if (texture->dict == krosaLoadedTXD) ++krosaMaterialMatchedTXDCount;
+            if (!krosaMaterialReport[0]) {
+                std::snprintf(krosaMaterialReport, sizeof(krosaMaterialReport),
+                    "MAT:%s MASK:%s R:%d D:%d", texture->name, texture->mask,
+                    texture->raster != nullptr, texture->dict == krosaLoadedTXD);
+            }
+        }
+    }
+}
+
+extern "C" void krosaGetMaterialDiagnostics(int *materials, int *textures, int *rasters, int *dictMatches, char *report, int capacity) {
+    if (materials) *materials = krosaMaterialCount;
+    if (textures) *textures = krosaMaterialTextureCount;
+    if (rasters) *rasters = krosaMaterialRasterCount;
+    if (dictMatches) *dictMatches = krosaMaterialMatchedTXDCount;
+    if (report && capacity > 0) {
+        std::strncpy(report, krosaMaterialReport, (size_t)capacity - 1);
+        report[capacity - 1] = 0;
+    }
+}
+
+extern "C" void krosaGetTXDDiagnostics(int *paths, int *opened, int *chunks, int *dicts, int *textures) {
+    if (paths) *paths = krosaTXDPathCount;
+    if (opened) *opened = krosaTXDOpenCount;
+    if (chunks) *chunks = krosaTXDChunkCount;
+    if (dicts) *dicts = krosaTXDValidationStatus;
+    if (textures) *textures = krosaTXDTextureCount;
+}
+
+extern "C" int krosaGetLastDFFValidationStatus(void) {
+    return krosaDFFValidationStatus;
+}
+
+static bool krosaLoadDFFIfAvailable() {
+    if (krosaLoadedClump) return true;
+    krosaLoadTXDsIfAvailable();
+    if (krosaDFFPath[0] == 0) { krosaDFFValidationStatus = -1; return false; }
+    rw::StreamFile stream;
+    if (!stream.open(krosaDFFPath, "rb")) { krosaDFFValidationStatus = -2; return false; }
+    const bool hasClumpChunk = rw::findChunk(&stream, rw::ID_CLUMP, nullptr, nullptr);
+    if (hasClumpChunk)
+        krosaLoadedClump = rw::Clump::streamRead(&stream);
+    stream.close();
+    if (!hasClumpChunk) krosaDFFValidationStatus = -3;
+    else if (!krosaLoadedClump) krosaDFFValidationStatus = -4;
+
+    // Streamed non-native geometries start without a MeshHeader in librw.
+    // Build their mesh data before validating or assigning the GL3 pipeline.
+    if (krosaLoadedClump) {
+        FORLIST(link, krosaLoadedClump->atomics) {
+            rw::Atomic *atomic = rw::Atomic::fromClump(link);
+            rw::Geometry *geometry = atomic ? atomic->geometry : nullptr;
+            if (geometry && !(geometry->flags & rw::Geometry::NATIVE))
+                geometry->unlock();
+        }
+    }
+
+    const int validationFailure = krosaClumpGL3Failure(krosaLoadedClump);
+    if (validationFailure != 0) {
+        krosaDFFValidationStatus = validationFailure;
+        // Some GTA DFFs contain native/plugin geometry that this generic GL3
+        // pipeline cannot instance. Reject the model before librw dereferences
+        // its MeshHeader; keep the diagnostic cube alive instead of crashing.
+        if (krosaLoadedClump) krosaLoadedClump->destroy();
+        krosaLoadedClump = nullptr;
+        return false;
+    }
+    krosaDFFValidationStatus = 1;
+    krosaInspectMaterials(krosaLoadedClump);
+    rw::V3d center = {0.0f, 0.0f, 0.0f};
+    int count = 0;
+    FORLIST(link, krosaLoadedClump->atomics) {
+        rw::Atomic *atomic = rw::Atomic::fromClump(link);
+        atomic->pipeline = krosaScenePipeline;
+        rw::Sphere *sphere = atomic->getWorldBoundingSphere();
+        center = rw::add(center, sphere->center);
+        ++count;
+    }
+    if (count > 0) center = rw::scale(center, 1.0f / (float)count);
+    float radius = 0.0f;
+    FORLIST(link, krosaLoadedClump->atomics) {
+        rw::Sphere *sphere = rw::Atomic::fromClump(link)->getWorldBoundingSphere();
+        const float extent = rw::length(rw::sub(sphere->center, center)) + sphere->radius;
+        if (extent > radius) radius = extent;
+    }
+    krosaLoadedClumpDistance = radius > 0.001f ? radius * 3.2f : 3.2f;
+    return true;
+}
+
+extern "C" void krosaLibrwGL3Shutdown(void) {
+    // Called by UIViewRepresentable dismantling with the creating EAGL context current.
+    if (krosaLoadedClump) {
+        if (krosaSceneWorld && krosaLoadedClump->world == krosaSceneWorld) krosaSceneWorld->removeClump(krosaLoadedClump);
+        krosaLoadedClump->destroy();
+        krosaLoadedClump = nullptr;
+    }
+    if (krosaLoadedTXD) {
+        krosaLoadedTXD->destroy();
+        krosaLoadedTXD = nullptr;
+    }
+    if (krosaSceneAtomic) {
+        if (krosaSceneWorld && krosaSceneAtomic->world == krosaSceneWorld) krosaSceneWorld->removeAtomic(krosaSceneAtomic);
+        krosaSceneAtomic->destroy();
+        krosaSceneAtomic = nullptr;
+    }
+    if (krosaSceneFrame) {
+        krosaSceneFrame->destroy();
+        krosaSceneFrame = nullptr;
+    }
+    if (rw::engine && rw::engine->currentWorld == krosaSceneWorld)
+        rw::engine->currentWorld = nullptr;
+    if (krosaSceneWorld && krosaSceneAmbientLight) {
+        krosaSceneWorld->removeLight(krosaSceneAmbientLight);
+        krosaSceneAmbientLight->destroy();
+        krosaSceneAmbientLight = nullptr;
+    }
+    if (krosaSceneWorld) {
+        krosaSceneWorld->destroy();
+        krosaSceneWorld = nullptr;
+    }
+    if (krosaScenePipeline) {
+        krosaScenePipeline->destroy();
+        krosaScenePipeline = nullptr;
+    }
+    krosaSceneReady = false;
+
+    if (rw::Engine::state == rw::Engine::Started)
+        rw::Engine::stop();
+    if (rw::Engine::state == rw::Engine::Opened)
+        rw::Engine::close();
+    if (rw::Engine::state == rw::Engine::Initialized)
+        rw::Engine::term();
+}
+
+extern "C" int krosaGetLastGeometryInitStatus(void) { return krosaLastGeometryInitStatus; }
+extern "C" int krosaGetLastEAGLInitStatus(void) { return krosaGetEAGLInitStatus(); }
+extern "C" int krosaGetLastGeometryDrawFlags(void) { return krosaLastGeometryDrawFlags; }
+extern "C" int krosaGetLastGeometryPixel(int i) { return krosaGetGL3DrawPixel(i); }
+extern "C" int krosaGetLastGeometryFramebuffer(void) { return krosaGetGL3DrawFramebuffer(); }
+extern "C" int krosaGetLastGeometryViewport(int i) { return krosaGetGL3DrawViewport(i); }
+extern "C" int krosaGetGL3DrawMetric(int);
+extern "C" int krosaGetLastGeometryMetric(int i) { return krosaGetGL3DrawMetric(i); }
 
 extern "C" int krosaRenderWareCoreSmokeTest(void) {
     if (rw::Engine::state != rw::Engine::Dead) {
@@ -65,4 +353,219 @@ extern "C" int krosaLibrwGL3InitSmokeTest(int width, int height) {
     rw::Engine::term();
 
     return ready ? 1 : -5;
+}
+
+extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angleY, float angleX, float cameraDistance) {
+    // The GL context, pipeline and GPU buffers belong to the lifetime of the
+    // GLKView. Keep the test scene alive instead of allocating/freeing it on
+    // every draw callback.
+    krosaLastGeometryInitStatus = -1;
+    if (width <= 0 || height <= 0)
+        return -1;
+
+    const bool needsEngineStart = rw::Engine::state == rw::Engine::Dead;
+    if (!needsEngineStart &&
+        (rw::Engine::state != rw::Engine::Started || rw::engine == nullptr))
+        return -1;
+
+    typedef void (*HostGetIntegervProc)(GLenum, GLint *);
+    HostGetIntegervProc hostGetIntegerv =
+        reinterpret_cast<HostGetIntegervProc>(dlsym(RTLD_DEFAULT, "glGetIntegerv"));
+    if (!hostGetIntegerv)
+        return -8;
+
+    GLint hostFramebuffer = 0;
+    GLint hostViewport[4] = {0, 0, 0, 0};
+    hostGetIntegerv(GL_FRAMEBUFFER_BINDING, &hostFramebuffer);
+    hostGetIntegerv(GL_VIEWPORT, hostViewport);
+    if (hostFramebuffer == 0)
+        return -7;
+
+    if (needsEngineStart) {
+        if (!rw::Engine::init()) {
+            krosaLastGeometryInitStatus = -2;
+            return -2;
+        }
+        rw::EngineOpenParams params;
+        params.width = width;
+        params.height = height;
+        params.windowtitle = "KroSA Geometry Test";
+        if (!rw::Engine::open(&params)) {
+            krosaLastGeometryInitStatus = -3;
+            rw::Engine::term();
+            return -3;
+        }
+        if (!rw::Engine::start()) {
+            krosaLastGeometryInitStatus = -4;
+            rw::Engine::close();
+            rw::Engine::term();
+            return -4;
+        }
+    }
+
+    krosaLastGeometryInitStatus =
+        rw::Engine::state == rw::Engine::Started &&
+        rw::gl3::defaultShader != nullptr && glGetString(GL_VERSION) != nullptr ? 1 : -5;
+    if (krosaLastGeometryInitStatus != 1)
+        return -5;
+
+    if (!krosaSceneReady) {
+        rw::Geometry *geometry = rw::Geometry::create(
+            24, 12, rw::Geometry::POSITIONS | rw::Geometry::PRELIT);
+        rw::Material *material = geometry ? rw::Material::create() : nullptr;
+        bool built = false;
+
+        if (geometry && material) {
+            material->color = {255, 255, 255, 255};
+
+            if (geometry->matList.appendMaterial(material) >= 0) {
+                rw::MorphTarget *target = &geometry->morphTargets[0];
+                const float facePositions[6][4][3] = {
+                    {{-0.72f,-0.72f, 0.72f},{ 0.72f,-0.72f, 0.72f},{ 0.72f, 0.72f, 0.72f},{-0.72f, 0.72f, 0.72f}},
+                    {{ 0.72f,-0.72f,-0.72f},{-0.72f,-0.72f,-0.72f},{-0.72f, 0.72f,-0.72f},{ 0.72f, 0.72f,-0.72f}},
+                    {{ 0.72f,-0.72f, 0.72f},{ 0.72f,-0.72f,-0.72f},{ 0.72f, 0.72f,-0.72f},{ 0.72f, 0.72f, 0.72f}},
+                    {{-0.72f,-0.72f,-0.72f},{-0.72f,-0.72f, 0.72f},{-0.72f, 0.72f, 0.72f},{-0.72f, 0.72f,-0.72f}},
+                    {{-0.72f, 0.72f, 0.72f},{ 0.72f, 0.72f, 0.72f},{ 0.72f, 0.72f,-0.72f},{-0.72f, 0.72f,-0.72f}},
+                    {{-0.72f,-0.72f,-0.72f},{ 0.72f,-0.72f,-0.72f},{ 0.72f,-0.72f, 0.72f},{-0.72f,-0.72f, 0.72f}}
+                };
+                const float faceUVs[4][2] = {
+                    {0.0f,0.0f},{1.0f,0.0f},{1.0f,1.0f},{0.0f,1.0f}
+                };
+                for (int face = 0; face < 6; ++face) {
+                    const int base = face * 4;
+                    for (int corner = 0; corner < 4; ++corner) {
+                        target->vertices[base + corner].set(
+                            facePositions[face][corner][0],
+                            facePositions[face][corner][1],
+                            facePositions[face][corner][2]);
+                        geometry->colors[base + corner] = {35, 245, 65, 255};
+                    }
+                    const int tri = face * 2;
+                    geometry->triangles[tri + 0].v[0] = base + 0;
+                    geometry->triangles[tri + 0].v[1] = base + 1;
+                    geometry->triangles[tri + 0].v[2] = base + 2;
+                    geometry->triangles[tri + 0].matId = 0;
+                    geometry->triangles[tri + 1].v[0] = base + 0;
+                    geometry->triangles[tri + 1].v[1] = base + 2;
+                    geometry->triangles[tri + 1].v[2] = base + 3;
+                    geometry->triangles[tri + 1].matId = 0;
+                }
+                geometry->calculateBoundingSphere();
+                geometry->unlock();
+
+                krosaSceneFrame = rw::Frame::create();
+                krosaSceneAtomic = rw::Atomic::create();
+                krosaSceneWorld = rw::World::create(nullptr);
+                if (krosaSceneWorld) {
+                    krosaSceneAmbientLight = rw::Light::create(rw::Light::AMBIENT);
+                    if (krosaSceneAmbientLight) {
+                        krosaSceneAmbientLight->setColor(0.55f, 0.55f, 0.55f);
+                        krosaSceneWorld->addLight(krosaSceneAmbientLight);
+                    }
+                }
+                if (rw::engine) rw::engine->currentWorld = krosaSceneWorld;
+                krosaScenePipeline = rw::gl3::makeDefaultPipeline();
+                if (krosaSceneFrame && krosaSceneAtomic && krosaSceneWorld && krosaScenePipeline && geometry->meshHeader) {
+                    krosaSceneAtomic->setFrame(krosaSceneFrame);
+                    krosaSceneAtomic->setGeometry(geometry, 0);
+                    geometry->destroy(); // Atomic owns its retained geometry reference.
+                    geometry = nullptr;
+                    krosaSceneAtomic->pipeline = krosaScenePipeline;
+                    krosaSceneWorld->addAtomic(krosaSceneAtomic);
+                    built = true;
+                }
+            }
+        }
+
+        if (material) material->destroy();
+        if (geometry) geometry->destroy();
+        krosaSceneReady = built;
+        if (!krosaSceneReady) {
+            if (krosaSceneAtomic) {
+                if (krosaSceneWorld && krosaSceneAtomic->world == krosaSceneWorld) krosaSceneWorld->removeAtomic(krosaSceneAtomic);
+                krosaSceneAtomic->destroy(); krosaSceneAtomic = nullptr;
+            }
+            if (krosaSceneFrame) { krosaSceneFrame->destroy(); krosaSceneFrame = nullptr; }
+            if (rw::engine && rw::engine->currentWorld == krosaSceneWorld) rw::engine->currentWorld = nullptr;
+            if (krosaSceneWorld && krosaSceneAmbientLight) {
+                krosaSceneWorld->removeLight(krosaSceneAmbientLight);
+                krosaSceneAmbientLight->destroy();
+                krosaSceneAmbientLight = nullptr;
+            }
+            if (krosaSceneWorld) { krosaSceneWorld->destroy(); krosaSceneWorld = nullptr; }
+            if (krosaScenePipeline) { krosaScenePipeline->destroy(); krosaScenePipeline = nullptr; }
+            return -6;
+        }
+    }
+
+    krosaLoadDFFIfAvailable();
+    if (krosaLoadedClump && krosaSceneWorld && krosaLoadedClump->world == nullptr)
+        krosaSceneWorld->addClump(krosaLoadedClump);
+
+    const float aspect = float(width) / float(height);
+    const float f = 1.0f / 0.57735026919f;
+    const float nearPlane = 0.1f;
+    const float farPlane = 100.0f;
+    const float projection[16] = {
+        f / aspect, 0, 0, 0,
+        0, f, 0, 0,
+        0, 0, (farPlane + nearPlane) / (nearPlane - farPlane), -1,
+        0, 0, (2.0f * farPlane * nearPlane) / (nearPlane - farPlane), 0
+    };
+    const float cy = cosf(angleY), sy = sinf(angleY);
+    const float cx = cosf(angleX), sx = sinf(angleX);
+    const float effectiveDistance = krosaLoadedClump ? krosaLoadedClumpDistance : cameraDistance;
+    const float view[16] = {
+        cy, sx * sy, -cx * sy, 0,
+        0, cx, sx, 0,
+        sy, -sx * cy, cx * cy, 0,
+        0, 0, -effectiveDistance, 1
+    };
+    rw::gl3::setProjectionMatrix(const_cast<float*>(projection));
+    rw::gl3::setViewMatrix(const_cast<float*>(view));
+
+    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)hostFramebuffer);
+    glViewport(hostViewport[0], hostViewport[1], hostViewport[2], hostViewport[3]);
+    const GLenum framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    int result = -100 - (int)framebufferStatus;
+    if (framebufferStatus == GL_FRAMEBUFFER_COMPLETE) {
+        rw::SetRenderState(rw::ZTESTENABLE, 1);
+        rw::SetRenderState(rw::ZWRITEENABLE, 1);
+        rw::SetRenderState(rw::CULLMODE, rw::CULLNONE);
+        rw::SetRenderState(rw::FOGENABLE, 0);
+        rw::SetRenderState(rw::VERTEXALPHA, 0);
+        while (glGetError() != GL_NO_ERROR) {}
+        rw::SetRenderState(rw::FOGCOLOR, 0xFFFFFFFF);
+        krosaResetGL3DrawDiagnostics();
+        if (krosaLoadedClump) krosaLoadedClump->render();
+        else krosaSceneAtomic->render();
+        krosaLastGeometryDrawFlags = krosaGetGL3DrawDiagnostics();
+        glFinish();
+
+        const GLenum drawError = glGetError();
+        const GLint sampleX = hostViewport[0] + hostViewport[2] / 2;
+        const GLint sampleY = hostViewport[1] + hostViewport[3] / 2;
+        GLubyte centerPixel[4] = {0, 0, 0, 0};
+        glReadPixels(sampleX, sampleY, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, centerPixel);
+        const GLenum readError = glGetError();
+        const bool greenPixel =
+            centerPixel[1] > centerPixel[0] + 35 && centerPixel[1] > centerPixel[2] + 20;
+
+        // Do not treat GL_CURRENT_PROGRAM or buffer bindings as draw-success
+        // criteria: librw's GL3 pipeline may legitimately unbind them after
+        // submission. The GL error state and sampled output are the meaningful
+        // checks here; the detailed pipeline diagnostics remain available above.
+        if (drawError != GL_NO_ERROR)
+            result = -2100 - (int)drawError;
+        else if (readError != GL_NO_ERROR)
+            result = -2200 - (int)readError;
+        else
+            result = greenPixel ? 1 :
+                -(1000 + centerPixel[0] * 65536 + centerPixel[1] * 256 + centerPixel[2]);
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)hostFramebuffer);
+    glViewport(hostViewport[0], hostViewport[1], hostViewport[2], hostViewport[3]);
+    glFlush();
+    return result;
 }

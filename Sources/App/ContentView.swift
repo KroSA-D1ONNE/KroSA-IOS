@@ -6,6 +6,7 @@ struct ContentView: View {
     @State private var serverPort = "7777"
     @State private var dataReport = GameDataBootstrap.inspect()
     @State private var showingGPUTest = false
+    @State private var showingDataManager = false
 
     private var canContinue: Bool {
         !nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
@@ -70,6 +71,22 @@ struct ContentView: View {
                 .disabled(true)
 
                 Button {
+                    showingDataManager = true
+                } label: {
+                    HStack(spacing: 9) {
+                        Image(systemName: "folder.badge.gearshape")
+                        Text("GESTIONAR DATA DEL JUEGO")
+                    }
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(Color.white.opacity(0.07))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .padding(.top, 8)
+
+                Button {
                     showingGPUTest = true
                 } label: {
                     Text("PROBAR GPU")
@@ -99,9 +116,11 @@ struct ContentView: View {
         }
         .onAppear(perform: refreshDataStatus)
         .sheet(isPresented: $showingGPUTest) { GPUTestView() }
+        .sheet(isPresented: $showingDataManager, onDismiss: refreshDataStatus) { GameDataManagerView() }
     }
 
     private func refreshDataStatus() {
+        try? GameFilesDirectory.prepare()
         try? GameDataBootstrap.provisionBundledText()
         dataReport = GameDataBootstrap.inspect()
     }

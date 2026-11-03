@@ -1,15 +1,18 @@
 name: KroSA iOS Build
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches: [feature/librw-geometry-eagl]
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: macos-15
+    # macos-14 usa otra imagen/cola de runners que macos-15.
+    runs-on: macos-14
     steps:
       - name: Checkout
         uses: actions/checkout@v4
