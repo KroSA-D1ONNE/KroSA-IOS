@@ -399,3 +399,54 @@ if decl not in hs:
         raise SystemExit("KroSA_RenderWareCoreBridge.h: raster diagnostics declaration missing")
     hs = hs.replace(anchor, decl + "\n" + anchor, 1)
 header.write_text(hs)
+
+
+// Trace entry into both texture ingestion paths, not only the native DXT branch.
+// This distinguishes "TXD parsed" from "GL3 texture reader / image rasterizer invoked".
+p = ROOT / "src/gl/gl3raster.cpp"
+raster_source = p.read_text()
+path_diag = """
+static int krosaNativeTextureReads=0, krosaRasterFromImageCalls=0;
+static int krosaNativeFormat=-1, krosaNativeWidth=-1, krosaNativeHeight=-1, krosaNativeLevels=-1;
+extern "C" void krosaGetTextureIngestDiagnostics(int *nativeReads,int *imageCalls,int *format,int *width,int *height,int *levels) {
+    if(nativeReads)*nativeReads=krosaNativeTextureReads;
+    if(imageCalls)*imageCalls=krosaRasterFromImageCalls;
+    if(format)*format=krosaNativeFormat;
+    if(width)*width=krosaNativeWidth;
+    if(height)*height=krosaNativeHeight;
+    if(levels)*levels=krosaNativeLevels;
+}
+"""
+if "krosaGetTextureIngestDiagnostics" not in raster_source:
+    marker = "namespace gl3 {"
+    if raster_source.count(marker) != 1:
+        raise SystemExit("gl3raster.cpp: texture-ingest namespace marker missing")
+    raster_source = raster_source.replace(marker, marker + "\\n" + path_diag, 1)
+
+def inject_ingest(pattern, replacement, label):
+    global raster_source
+    raster_source, count = re.subn(pattern, replacement, raster_source, count=1)
+    if count != 1:
+        raise SystemExit(f"gl3raster.cpp: expected one {label} entry, got {count}")
+
+inject_ingest(
+    r"(Texture\\*\\s*\\nreadNativeTexture\\(Stream \\*stream\\)\\s*\\{)",
+    r"\\1\\n    krosaNativeTextureReads++;",
+    "readNativeTexture"
+)
+inject_ingest(
+    r"(Image\\)\\s*\\n? rasterFromImage\\(Raster \\*raster, Image \\*image\\)\\s*\\{",
+    r"\\1\\n    krosaRasterFromImageCalls++;",
+    "rasterFromImage"
+)
+# Capture native raster header as it is read, regardless of compression flags.
+needle = "\\tint32 numLevels = stream->readI32();"
+if raster_source.count(needle) != 1:
+    raise SystemExit("gl3raster.cpp: native texture header read anchor missing")
+raster_source = raster_source.replace(
+    needle,
+    needle + "\\n\\tkrosaNativeFormat = (int)format; krosaNativeWidth = width; krosaNativeHeight = height; krosaNativeLevels = numLevels;",
+    1
+)
+p.write_text(raster_source)
+print("Applied iOS texture-ingest diagnostics")
