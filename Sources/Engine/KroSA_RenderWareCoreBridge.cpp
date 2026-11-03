@@ -56,7 +56,7 @@ static bool krosaLoadTXDsIfAvailable() {
     int loaded = 0;
     char *path = paths;
     while (*path) {
-        char *end = std::strchr(path, '\\n');
+        char *end = std::strchr(path, '\n');
         if (end) *end = 0;
         if (*path) {
             rw::StreamFile stream;
