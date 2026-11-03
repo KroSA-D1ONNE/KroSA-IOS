@@ -230,8 +230,6 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
                             facePositions[face][corner][1],
                             facePositions[face][corner][2]);
                         geometry->colors[base + corner] = {35, 245, 65, 255};
-                        geometry->texCoords[0][base + corner] = {
-                            faceUVs[corner][0], faceUVs[corner][1]};
                     }
                     const int tri = face * 2;
                     geometry->triangles[tri + 0].v[0] = base + 0;
