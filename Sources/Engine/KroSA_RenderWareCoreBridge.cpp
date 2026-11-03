@@ -65,8 +65,8 @@ static bool krosaLoadTXDsIfAvailable() {
                 rw::TexDictionary *dictionary = hasTXDChunk ? rw::TexDictionary::streamRead(&stream) : nullptr;
                 stream.close();
                 if (dictionary) {
-                    while (dictionary->textures.count() > 0) {
-                        rw::Texture *texture = rw::Texture::fromDict(dictionary->textures.next());
+                    while (!dictionary->textures.isEmpty()) {
+                        rw::Texture *texture = rw::Texture::fromDict(dictionary->textures.link.next);
                         dictionary->remove(texture);
                         krosaLoadedTXD->add(texture);
                     }
