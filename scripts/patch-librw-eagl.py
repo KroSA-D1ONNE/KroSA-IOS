@@ -421,7 +421,7 @@ if "krosaGetTextureIngestDiagnostics" not in raster_source:
     marker = "namespace gl3 {"
     if raster_source.count(marker) != 1:
         raise SystemExit("gl3raster.cpp: texture-ingest namespace marker missing")
-    raster_source = raster_source.replace(marker, marker + "\\n" + path_diag, 1)
+    raster_source = raster_source.replace(marker, marker + "\n" + path_diag, 1)
 
 def inject_ingest(pattern, replacement, label):
     global raster_source
@@ -430,22 +430,22 @@ def inject_ingest(pattern, replacement, label):
         raise SystemExit(f"gl3raster.cpp: expected one {label} entry, got {count}")
 
 inject_ingest(
-    r"(Texture\\*\\s*\\nreadNativeTexture\\(Stream \\*stream\\)\\s*\\{)",
-    r"\\1\\n    krosaNativeTextureReads++;",
+    r"(Texture\*\s*\nreadNativeTexture\(Stream \*stream\)\s*\{)",
+    r"\1\n    krosaNativeTextureReads++;",
     "readNativeTexture"
 )
 inject_ingest(
-    r"(Image\\)\\s*\\n? rasterFromImage\\(Raster \\*raster, Image \\*image\\)\\s*\\{",
-    r"\\1\\n    krosaRasterFromImageCalls++;",
+    r"(bool32\s*\nrasterFromImage\(Raster \*raster, Image \*image\)\s*\{)",
+    r"\1\n    krosaRasterFromImageCalls++;",
     "rasterFromImage"
 )
 # Capture native raster header as it is read, regardless of compression flags.
-needle = "\\tint32 numLevels = stream->readI32();"
+needle = "\tint32 numLevels = stream->readI32();"
 if raster_source.count(needle) != 1:
     raise SystemExit("gl3raster.cpp: native texture header read anchor missing")
 raster_source = raster_source.replace(
     needle,
-    needle + "\\n\\tkrosaNativeFormat = (int)format; krosaNativeWidth = width; krosaNativeHeight = height; krosaNativeLevels = numLevels;",
+    needle + "\n\tkrosaNativeFormat = (int)format; krosaNativeWidth = width; krosaNativeHeight = height; krosaNativeLevels = numLevels;",
     1
 )
 p.write_text(raster_source)
