@@ -381,15 +381,7 @@ private struct GLES2TextureView: UIViewRepresentable {
             // RenderWare's device and GL3 shaders remain alive between frames.
             let dffPath = GameFilesDirectory.url.appendingPathComponent("models/infernus.dff").path
             dffPath.withCString { krosaLibrwGL3SetDFFPath($0) }
-            let txdPaths = (FileManager.default.enumerator(at: GameFilesDirectory.url, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles])?
-                .compactMap { $0 as? URL }
-                .filter { $0.pathExtension.lowercased() == "txd" }
-                .sorted { lhs, rhs in
-                    let lhsRoot = lhs.deletingLastPathComponent() == GameFilesDirectory.url
-                    let rhsRoot = rhs.deletingLastPathComponent() == GameFilesDirectory.url
-                    return lhsRoot && !rhsRoot
-                }
-                .map(\.path) ?? []).joined(separator: "\\n")
+            let txdPaths = GameFilesDirectory.textureDictionaryPaths
             txdPaths.withCString { krosaLibrwGL3SetTXDPaths($0) }
             let result = krosaLibrwGL3GeometrySmokeTest(
                 drawableWidth, drawableHeight, cameraYaw, cameraPitch, cameraDistance
