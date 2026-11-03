@@ -55,6 +55,12 @@ edit("src/gl/gl3device.cpp", [
 ])
 
 edit("src/gl/gl3device.cpp", [
+    ('static int\ninitOpenGL(void)', 'static int krosaEAGLInitStatus = 0;\n\nstatic int\ninitOpenGL(void)'),
+    ('#elif defined(LIBRW_GLFW)\n\tgl3::deviceSystemGLFW\n#else\n\tnot implemented\n#endif',
+     '#elif defined(LIBRW_GLFW)\n\tgl3::deviceSystemGLFW\n#elif defined(LIBRW_EAGL)\n\tgl3::deviceSystemEAGL\n#else\n#error "Unsupported GL3 host backend"\n#endif')
+])
+
+edit("src/gl/gl3device.cpp", [
     ('#else\nnot implemented\n#endif\n\nstatic int\ninitOpenGL(void)',
      '#elif defined(LIBRW_EAGL)\nstatic int stopEAGL(void) { return 1; }\n#else\n#error "Unsupported GL3 host backend"\n#endif\n\nstatic int\ninitOpenGL(void)'),
     ('#else\n\tnot implemented\n#endif\n};\n\n}\n}',
