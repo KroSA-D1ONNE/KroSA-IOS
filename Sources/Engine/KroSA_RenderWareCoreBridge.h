@@ -31,6 +31,7 @@ int krosaGetLastGeometryInitStatus(void);
 int krosaGetLastEAGLInitStatus(void);
 /// DFF load status: 1 loaded, negative stream/path error, positive validation code otherwise.
 int krosaGetLastDFFValidationStatus(void);
+void krosaGetTXDDiagnostics(int *paths, int *opened, int *chunks, int *dicts, int *textures);
 
 /// Bit flags captured inside librw defaultRenderCB before/after glDrawElements.
 int krosaGetLastGeometryDrawFlags(void);
