@@ -29,37 +29,47 @@ extern "C" void krosaLibrwGL3SetDFFPath(const char *path) {
     krosaDFFPath[sizeof(krosaDFFPath) - 1] = 0;
 }
 
-static bool krosaGeometryCanUseGL3(const rw::Geometry *geometry) {
-    if (!geometry || (geometry->flags & rw::Geometry::NATIVE) ||
-        !geometry->meshHeader || geometry->numVertices <= 0 ||
-        geometry->numMorphTargets <= 0 || !geometry->morphTargets ||
-        !geometry->morphTargets[0].vertices ||
-        geometry->meshHeader->numMeshes == 0 ||
-        geometry->meshHeader->totalIndices == 0)
-        return false;
+static int krosaDFFValidationStatus = 0;
 
+// Positive codes identify the exact rejected field; 1000+ encodes
+// atomicIndex*100 + geometryFailure so the device can report which atomic failed.
+static int krosaGeometryGL3Failure(const rw::Geometry *geometry) {
+    if (!geometry) return 1;
+    if (geometry->flags & rw::Geometry::NATIVE) return 2;
+    if (!geometry->meshHeader) return 3;
+    if (geometry->numVertices <= 0) return 4;
+    if (geometry->numMorphTargets <= 0 || !geometry->morphTargets) return 5;
+    if (!geometry->morphTargets[0].vertices) return 6;
+    if (geometry->meshHeader->numMeshes == 0) return 7;
+    if (geometry->meshHeader->totalIndices == 0) return 8;
     const rw::Mesh *meshes = geometry->meshHeader->getMeshes();
-    if (!meshes) return false;
+    if (!meshes) return 9;
     for (uint32_t i = 0; i < geometry->meshHeader->numMeshes; ++i) {
         const rw::Mesh &mesh = meshes[i];
-        if (!mesh.indices || mesh.numIndices == 0 || !mesh.material)
-            return false;
-        for (uint32_t j = 0; j < mesh.numIndices; ++j) {
-            if (mesh.indices[j] >= geometry->numVertices)
-                return false;
-        }
+        if (!mesh.indices) return 10;
+        if (mesh.numIndices == 0) return 11;
+        if (!mesh.material) return 12;
+        for (uint32_t j = 0; j < mesh.numIndices; ++j)
+            if (mesh.indices[j] >= geometry->numVertices) return 13;
     }
-    return true;
+    return 0;
 }
 
-static bool krosaClumpCanUseGL3(rw::Clump *clump) {
-    if (!clump || clump->countAtomics() == 0) return false;
+static int krosaClumpGL3Failure(rw::Clump *clump) {
+    if (!clump) return 20;
+    if (clump->countAtomics() == 0) return 21;
+    int atomicIndex = 0;
     FORLIST(link, clump->atomics) {
         rw::Atomic *atomic = rw::Atomic::fromClump(link);
-        if (!atomic || !krosaGeometryCanUseGL3(atomic->geometry))
-            return false;
+        const int failure = atomic ? krosaGeometryGL3Failure(atomic->geometry) : 22;
+        if (failure) return 1000 + atomicIndex * 100 + failure;
+        ++atomicIndex;
     }
-    return true;
+    return 0;
+}
+
+extern "C" int krosaGetLastDFFValidationStatus(void) {
+    return krosaDFFValidationStatus;
 }
 
 static bool krosaLoadDFFIfAvailable() {
