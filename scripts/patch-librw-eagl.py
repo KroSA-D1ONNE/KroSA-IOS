@@ -313,6 +313,8 @@ edit("src/gl/gl3raster.cpp", [
      'rasterLock(Raster *raster, int32 level, int32 lockMode)\\n\\tkrosaRasterLockCount++;'),
     ('rasterUnlock(Raster *raster, int32 level)',
      'rasterUnlock(Raster *raster, int32 level)\\n\\tkrosaRasterUnlockCount++;'),
-    ('raster->pixels);',
-     'raster->pixels);\\n\\t\\t\\t\\tif(level == 0){ krosaUploadWidth=raster->width; krosaUploadHeight=raster->height; krosaUploadFormat=natras->internalFormat; krosaUploadError=glGetError(); }')
+    ('glPixelStorei(GL_UNPACK_ALIGNMENT, 1);',
+     'glPixelStorei(GL_UNPACK_ALIGNMENT, 1);'),
+    ('glTexImage2D(GL_TEXTURE_2D, level, natras->internalFormat,\\n\\t\\t\\t     raster->width, raster->height,\\n\\t\\t\\t     0, natras->format, natras->type, raster->pixels);',
+     'glTexImage2D(GL_TEXTURE_2D, level, natras->internalFormat,\\n\\t\\t\\t     raster->width, raster->height,\\n\\t\\t\\t     0, natras->format, natras->type, raster->pixels);\\n\\t\\t\\tif(level == 0){ krosaUploadWidth=raster->width; krosaUploadHeight=raster->height; krosaUploadFormat=natras->internalFormat; krosaUploadError=glGetError(); }')
 ])
