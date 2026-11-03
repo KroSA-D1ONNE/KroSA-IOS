@@ -48,60 +48,32 @@ edit("src/gl/rwgl3impl.h", [
 ])
 
 edit("src/gl/gl3device.cpp", [
-    ('#else\n\t\tmissing implementation\n#endif',
-     '#elif defined(LIBRW_EAGL)\n\t\tr.w = glGlobals.presentWidth;\n\t\tr.h = glGlobals.presentHeight;\n#else\n#error "Unsupported framebuffer sizing backend"\n#endif'),
-    ('#else\n\tnot implemented\n#endif\n}\n\nstatic bool32\nrasterRenderFast',
-     '#elif defined(LIBRW_EAGL)\n\t// The host GLKView presents the drawable.\n#else\n#error "Unsupported buffer presentation backend"\n#endif\n}\n\nstatic bool32\nrasterRenderFast')
-])
-
-edit("src/gl/gl3device.cpp", [
-    ('static int\ninitOpenGL(void)', 'static int krosaEAGLInitStatus = 0;\n\nstatic int\ninitOpenGL(void)'),
+    ('#include <assert.h>\n', '#include <assert.h>\n#ifdef LIBRW_EAGL\n#include <dlfcn.h>\n#include <string.h>\n#endif\n'),
+    ('#elif defined(LIBRW_GLFW)\n\t\tglfwGetFramebufferSize(glGlobals.window, &r.w, &r.h);\n#else\n\t\tmissing implementation\n#endif',
+     '#elif defined(LIBRW_GLFW)\n\t\tglfwGetFramebufferSize(glGlobals.window, &r.w, &r.h);\n#elif defined(LIBRW_EAGL)\n\t\tr.w = glGlobals.presentWidth;\n\t\tr.h = glGlobals.presentHeight;\n#else\n#error "Missing framebuffer dimensions for GL3 host"\n#endif'),
+    ('\tglfwSwapBuffers(glGlobals.window);\n#else\n\tnot implemented\n#endif',
+     '\tglfwSwapBuffers(glGlobals.window);\n#elif defined(LIBRW_EAGL)\n\t// GLKView owns presentation; its delegate presents after this draw callback.\n\t(void)raster;\n\t(void)flags;\n#else\n#error "Missing raster presentation for GL3 host"\n#endif'),
+    ('static int\nstopGLFW(void)\n{\n\tglfwDestroyWindow(glGlobals.window);\n\treturn 1;\n}\n#else\nnot implemented\n#endif',
+     """static int\nstopGLFW(void)\n{\n\tglfwDestroyWindow(glGlobals.window);\n\treturn 1;\n}\n#elif defined(LIBRW_EAGL)\nstatic void *\nloadEAGLProc(const char *name)\n{\n\t// Desktop GL loaders may request ARB-suffixed entry points. On iOS\n\t// those aliases are not exported by OpenGL ES; resolve them to the\n\t// equivalent GLES core entry point instead of accepting a dead stub.\n\tsize_t length = strlen(name);\n\tif(length > 3 && strcmp(name + length - 3, "ARB") == 0){\n\t\tchar coreName[256];\n\t\tif(length - 3 < sizeof(coreName)){\n\t\t\tmemcpy(coreName, name, length - 3);\n\t\t\tcoreName[length - 3] = '\\0';\n\t\t\tvoid *coreProc = dlsym(RTLD_DEFAULT, coreName);\n\t\t\tif(coreProc) return coreProc;\n\t\t}\n\t}\n\treturn dlsym(RTLD_DEFAULT, name);\n}\n\nstatic int\nopenEAGL(EngineOpenParams *params)\n{\n\tif(params == nil || params->width <= 0 || params->height <= 0)\n\t\treturn 0;\n\tglGlobals.winWidth = params->width;\n\tglGlobals.winHeight = params->height;\n\tglGlobals.winTitle = params->windowtitle;\n\tglGlobals.presentWidth = params->width;\n\tglGlobals.presentHeight = params->height;\n\tglGlobals.presentOffX = 0;\n\tglGlobals.presentOffY = 0;\n\tglGlobals.numDisplays = 1;\n\tglGlobals.currentDisplay = 0;\n\tgl3Caps.gles = 1;\n\tgl3Caps.glversion = 20;\n\treturn 1;\n}\n\nstatic int closeEAGL(void) { return 1; }\n\nstatic int krosaEAGLInitStatus = 0;\nextern "C" int krosaGetEAGLInitStatus(void) { return krosaEAGLInitStatus; }\n\nstatic int\nstartEAGL(void)\n{\n\tkrosaEAGLInitStatus = -1;\n\tif(!gladLoadGLES2Loader(loadEAGLProc, 20)){\n\t\tRWERROR((ERR_GENERAL, "Unable to load OpenGL ES 2 entry points from the current EAGL context"));\n\t\treturn 0;\n\t}\n\tkrosaEAGLInitStatus = -2;\n\tif(glGetString(GL_VERSION) == nil) return 0;\n\tkrosaEAGLInitStatus = 1;\n\treturn 1;\n}\n\nstatic int stopEAGL(void) { return 1; }\n#else\n#error "Unsupported GL3 host backend"\n#endif"""),
+    ('static void\nsetRasterStage(uint32 stage, Raster *raster)\n{\n\tbool32 alpha;\n\tif(raster != rwStateCache.texstage[stage].raster){',
+     'static void\nsetRasterStage(uint32 stage, Raster *raster)\n{\n\tbool32 alpha;\n\t// A null texture must bind librw\'s white fallback even when the cache starts null.\n\tif(raster != rwStateCache.texstage[stage].raster || raster == nil){'),
+    ('\tglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gl3Caps.maxAnisotropy);',
+     '\tgl3Caps.maxAnisotropy = 1.0f;\n\tif(GLAD_GL_EXT_texture_filter_anisotropic)\n\t\tglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gl3Caps.maxAnisotropy);'),
+    ('\tglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAnisotropy);',
+     '\tmaxAnisotropy = 1.0f;\n\tif(GLAD_GL_EXT_texture_filter_anisotropic)\n\t\tglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAnisotropy);'),
+    ('\t\t\t\tglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, (float)maxAniso);',
+     '\t\t\t\tif(GLAD_GL_EXT_texture_filter_anisotropic)\n\t\t\t\t\tglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, (float)maxAniso);'),
+    ('#elif defined(LIBRW_GLFW)\n\nstatic int\ndeviceSystemGLFW(DeviceReq req, void *arg, int32 n)',
+     '#elif defined(LIBRW_GLFW)\n\nstatic int\ndeviceSystemGLFW(DeviceReq req, void *arg, int32 n)'),
+    ('#else\n\nnot implemented\n\n#endif\n\nDevice renderdevice = {',
+     '#elif defined(LIBRW_EAGL)\nstatic int\ndeviceSystemEAGL(DeviceReq req, void *arg, int32 n)\n{\n\tswitch(req){\n\tcase DEVICEOPEN:\n\t\treturn openEAGL((EngineOpenParams*)arg);\n\tcase DEVICECLOSE:\n\t\treturn closeEAGL();\n\tcase DEVICEINIT:\n\t\tif(!startEAGL()) return 0;\n\t\tkrosaEAGLInitStatus = -3;\n\t\tif(!initOpenGL()) return 0;\n\t\tkrosaEAGLInitStatus = 2;\n\t\treturn 1;\n\tcase DEVICETERM:\n\t\treturn termOpenGL() && stopEAGL();\n\tcase DEVICEFINALIZE:\n\t\treturn finalizeOpenGL();\n\tcase DEVICEGETNUMSUBSYSTEMS:\n\t\treturn 1;\n\tcase DEVICEGETCURRENTSUBSYSTEM:\n\t\treturn 0;\n\tcase DEVICESETSUBSYSTEM:\n\t\treturn n == 0;\n\tcase DEVICEGETSUBSSYSTEMINFO:\n\t\tstrncpy(((SubSystemInfo*)arg)->name, "iOS EAGL", sizeof(SubSystemInfo::name));\n\t\treturn 1;\n\tcase DEVICEGETNUMVIDEOMODES:\n\t\treturn 1;\n\tcase DEVICEGETCURRENTVIDEOMODE:\n\t\treturn 0;\n\tcase DEVICESETVIDEOMODE:\n\t\treturn n == 0;\n\tcase DEVICEGETVIDEOMODEINFO: {\n\t\tVideoMode *mode = (VideoMode*)arg;\n\t\tmode->width = glGlobals.presentWidth;\n\t\tmode->height = glGlobals.presentHeight;\n\t\tmode->depth = 32;\n\t\tmode->flags = 0;\n\t\treturn 1;\n\t}\n\tcase DEVICEGETMAXMULTISAMPLINGLEVELS:\n\t\treturn 0;\n\tcase DEVICEGETMULTISAMPLINGLEVELS:\n\t\treturn 0;\n\tcase DEVICESETMULTISAMPLINGLEVELS:\n\t\treturn n == 0;\n\tdefault:\n\t\t// Unknown host queries must fail safely; never abort the iOS process.\n\t\treturn 0;\n\t}\n}\n#endif\n\nDevice renderdevice = {'),
     ('#elif defined(LIBRW_GLFW)\n\tgl3::deviceSystemGLFW\n#else\n\tnot implemented\n#endif',
-     '#elif defined(LIBRW_GLFW)\n\tgl3::deviceSystemGLFW\n#elif defined(LIBRW_EAGL)\n\tgl3::deviceSystemEAGL\n#else\n#error "Unsupported GL3 host backend"\n#endif')
+     '#elif defined(LIBRW_GLFW)\n\tgl3::deviceSystemGLFW\n#elif defined(LIBRW_EAGL)\n\tgl3::deviceSystemEAGL\n#else\n#error "Unsupported GL3 device system"\n#endif')
 ])
 
 edit("src/gl/gl3device.cpp", [
-    ('#else\n\nnot implemented\n\n#endif',
-     '''#elif defined(LIBRW_EAGL)
-static int stopEAGL(void) { return 1; }
-static int deviceSystemEAGL(DeviceReq req, void *arg, int32 n)
-{
-    switch(req){
-    case DEVICEOPEN: return 1;
-    case DEVICECLOSE: return 1;
-    case DEVICEINIT: return initOpenGL();
-    case DEVICETERM: return termOpenGL() && stopEAGL();
-    case DEVICEFINALIZE: return finalizeOpenGL();
-    case DEVICEGETNUMSUBSYSTEMS: return 1;
-    case DEVICEGETCURRENTSUBSYSTEM: return 0;
-    case DEVICESETSUBSYSTEM: return n == 0;
-    case DEVICEGETNUMVIDEOMODES: return 1;
-    case DEVICEGETCURRENTVIDEOMODE: return 0;
-    case DEVICESETVIDEOMODE: return n == 0;
-    case DEVICEGETVIDEOMODEINFO: {
-        VideoMode *mode = (VideoMode*)arg;
-        mode->width = glGlobals.presentWidth;
-        mode->height = glGlobals.presentHeight;
-        mode->depth = 32;
-        mode->flags = 0;
-        return 1;
-    }
-    case DEVICEGETMAXMULTISAMPLINGLEVELS: return 1;
-    case DEVICEGETMULTISAMPLINGLEVELS: return 1;
-    case DEVICESETMULTISAMPLINGLEVELS: return n <= 1;
-    default: return 0;
-    }
-}
-#else
-#error "Unsupported GL3 host backend"
-#endif''')
-])
-
-edit("src/gl/gl3device.cpp", [
-    (
-        '\tdefaultShader = Shader::create(vs, fs);\n\tassert(defaultShader);\n\tdefaultShader_noAT = Shader::create(vs, fs_noAT);\n\tassert(defaultShader_noAT);\n\n\tdefaultShader_fullLight = Shader::create(vs_fullLight, fs);\n\tassert(defaultShader_fullLight);\n\tdefaultShader_fullLight_noAT = Shader::create(vs_fullLight, fs_noAT);\n\tassert(defaultShader_fullLight_noAT);',
-        '\tkrosaEAGLInitStatus = -31;\n\tdefaultShader = Shader::create(vs, fs);\n\tif(!defaultShader) return 0;\n\tkrosaEAGLInitStatus = -32;\n\tdefaultShader_noAT = Shader::create(vs, fs_noAT);\n\tif(!defaultShader_noAT) return 0;\n\tkrosaEAGLInitStatus = -33;\n\tdefaultShader_fullLight = Shader::create(vs_fullLight, fs);\n\tif(!defaultShader_fullLight) return 0;\n\tkrosaEAGLInitStatus = -34;\n\tdefaultShader_fullLight_noAT = Shader::create(vs_fullLight, fs_noAT);\n\tif(!defaultShader_fullLight_noAT) return 0;\n\tkrosaEAGLInitStatus = -35;'
-    )
+    ('\tdefaultShader = Shader::create(vs, fs);\n\tassert(defaultShader);\n\tdefaultShader_noAT = Shader::create(vs, fs_noAT);\n\tassert(defaultShader_noAT);\n\n\tdefaultShader_fullLight = Shader::create(vs_fullLight, fs);\n\tassert(defaultShader_fullLight);\n\tdefaultShader_fullLight_noAT = Shader::create(vs_fullLight, fs_noAT);\n\tassert(defaultShader_fullLight_noAT);',
+     '\tkrosaEAGLInitStatus = -31;\n\tdefaultShader = Shader::create(vs, fs);\n\tif(!defaultShader) return 0;\n\tkrosaEAGLInitStatus = -32;\n\tdefaultShader_noAT = Shader::create(vs, fs_noAT);\n\tif(!defaultShader_noAT) return 0;\n\tkrosaEAGLInitStatus = -33;\n\tdefaultShader_fullLight = Shader::create(vs_fullLight, fs);\n\tif(!defaultShader_fullLight) return 0;\n\tkrosaEAGLInitStatus = -34;\n\tdefaultShader_fullLight_noAT = Shader::create(vs_fullLight, fs_noAT);\n\tif(!defaultShader_fullLight_noAT) return 0;\n\tkrosaEAGLInitStatus = -35;')
 ])
 
 edit("src/engine.cpp", [
