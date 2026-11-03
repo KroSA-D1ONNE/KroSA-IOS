@@ -24,6 +24,8 @@ void krosaLibrwGL3Shutdown(void);
 /// Sets the optional user-provided DFF path; the file is streamed only after GL3 is ready.
 void krosaLibrwGL3SetDFFPath(const char *path);
 int krosaGetLastGeometryInitStatus(void);
+/// EAGL backend stage: -1 loader failed, -2 no GL version, -3 GL3 init failed, 2 ready.
+int krosaGetLastEAGLInitStatus(void);
 /// DFF load status: 1 loaded, negative stream/path error, positive validation code otherwise.
 int krosaGetLastDFFValidationStatus(void);
 
