@@ -434,7 +434,12 @@ private struct GLES2TextureView: UIViewRepresentable {
             var rasterCreated: Int32 = -1, rasterLocked: Int32 = -1, rasterUnlocked: Int32 = -1
             krosaGetRasterUploadDiagnostics(&uploadWidth, &uploadHeight, &uploadFormat, &uploadError, &rasterCreated, &rasterLocked, &rasterUnlocked)
             let rasterUploadReport = "RASTER:\(rasterCreated)/LOCK:\(rasterLocked)/UNLOCK:\(rasterUnlocked) UPLOAD:\(uploadWidth)x\(uploadHeight)/FMT:\(uploadFormat)/ERR:\(uploadError) "
-            let report = "EAGL:\(eaglStatus) DFF:\(dffStatus) TXD:\(txdPaths)/\(txdOpened)/\(txdChunks)/\(txdDicts)/\(txdTextures) MAT:\(materialCount)/\(materialTextures)/\(materialRasters)/\(materialDictMatches) \(materialReport) \(texturePathReport)\(rasterUploadReport)FLAGS:\(flags) MESH:\(metrics[3]) IDX:\(metrics[0]) VTX:\(metrics[2])\nPIXELS:\(metrics[5]) BOX:\(metrics[6]),\(metrics[7])-\(metrics[8]),\(metrics[9]) BLUE:\(metrics[10])\nFBO:\(framebuffer) VP:\(viewport)\nSHADER_STAGE: \(shaderStage) (0=none,1=vertex,2=fragment,3=link)\nSHADER: \(shaderError)"
+            var dxtSupported: Int32 = -1, dxtSeen: Int32 = 0, dxtRejected: Int32 = 0
+            var dxtFormat: Int32 = -1, dxtLevels: Int32 = -1, dxtWidth: Int32 = -1, dxtHeight: Int32 = -1
+            var dxtBytes: Int32 = -1, dxtError: Int32 = -1, dxtUploads: Int32 = 0
+            krosaGetDXTDiagnostics(&dxtSupported, &dxtSeen, &dxtRejected, &dxtFormat, &dxtLevels, &dxtWidth, &dxtHeight, &dxtBytes, &dxtError, &dxtUploads)
+            let dxtReport = "DXT:SUP:\(dxtSupported)/SEEN:\(dxtSeen)/REJECT:\(dxtRejected) FMT:\(dxtFormat) LVL:\(dxtLevels) SIZE:\(dxtWidth)x\(dxtHeight) UPLOAD:\(dxtUploads)/\(dxtBytes)B/ERR:\(dxtError) "
+            let report = "EAGL:\(eaglStatus) DFF:\(dffStatus) TXD:\(txdPaths)/\(txdOpened)/\(txdChunks)/\(txdDicts)/\(txdTextures) MAT:\(materialCount)/\(materialTextures)/\(materialRasters)/\(materialDictMatches) \(materialReport) \(texturePathReport)\(rasterUploadReport)\(dxtReport)FLAGS:\(flags) MESH:\(metrics[3]) IDX:\(metrics[0]) VTX:\(metrics[2])\nPIXELS:\(metrics[5]) BOX:\(metrics[6]),\(metrics[7])-\(metrics[8]),\(metrics[9]) BLUE:\(metrics[10])\nFBO:\(framebuffer) VP:\(viewport)\nSHADER_STAGE: \(shaderStage) (0=none,1=vertex,2=fragment,3=link)\nSHADER: \(shaderError)"
             if lastDiagnosticsReport != report {
                 lastDiagnosticsReport = report
                 DispatchQueue.main.async { [weak self] in self?.onDiagnostics?(report) }
