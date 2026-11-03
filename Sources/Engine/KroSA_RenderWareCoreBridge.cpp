@@ -52,10 +52,10 @@ static bool krosaGeometryCanUseGL3(const rw::Geometry *geometry) {
     return true;
 }
 
-static bool krosaClumpCanUseGL3(const rw::Clump *clump) {
+static bool krosaClumpCanUseGL3(rw::Clump *clump) {
     if (!clump || clump->countAtomics() == 0) return false;
     FORLIST(link, clump->atomics) {
-        const rw::Atomic *atomic = rw::Atomic::fromClump(link);
+        rw::Atomic *atomic = rw::Atomic::fromClump(link);
         if (!atomic || !krosaGeometryCanUseGL3(atomic->geometry))
             return false;
     }
