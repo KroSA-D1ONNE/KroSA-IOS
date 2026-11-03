@@ -199,7 +199,7 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
         }
 
         rw::Geometry *geometry = rw::Geometry::create(
-            24, 12, rw::Geometry::POSITIONS | rw::Geometry::PRELIT | rw::Geometry::TEXTURED);
+            24, 12, rw::Geometry::POSITIONS | rw::Geometry::PRELIT);
         rw::Material *material = geometry ? rw::Material::create() : nullptr;
         bool built = false;
 
@@ -229,7 +229,7 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
                             facePositions[face][corner][0],
                             facePositions[face][corner][1],
                             facePositions[face][corner][2]);
-                        geometry->colors[base + corner] = {255, 255, 255, 255};
+                        geometry->colors[base + corner] = {35, 245, 65, 255};
                         geometry->texCoords[0][base + corner] = {
                             faceUVs[corner][0], faceUVs[corner][1]};
                     }
