@@ -24,6 +24,8 @@ static rw::gl3::ObjPipeline *krosaScenePipeline = nullptr;
 static bool krosaSceneReady = false;
 static char krosaDFFPath[1024] = {0};
 static rw::Clump *krosaLoadedClump = nullptr;
+static rw::TexDictionary *krosaLoadedTXD = nullptr;
+static char krosaTXDPaths[8192] = {0};
 static float krosaLoadedClumpDistance = 3.2f;
 
 extern "C" void krosaLibrwGL3SetDFFPath(const char *path) {
@@ -33,6 +35,45 @@ extern "C" void krosaLibrwGL3SetDFFPath(const char *path) {
 }
 
 static int krosaDFFValidationStatus = 0;
+static int krosaTXDValidationStatus = 0;
+
+extern "C" void krosaLibrwGL3SetTXDPaths(const char *paths) {
+    if (!paths) { krosaTXDPaths[0] = 0; return; }
+    std::strncpy(krosaTXDPaths, paths, sizeof(krosaTXDPaths) - 1);
+    krosaTXDPaths[sizeof(krosaTXDPaths) - 1] = 0;
+}
+
+static bool krosaLoadTXDsIfAvailable() {
+    if (krosaLoadedTXD) {
+        rw::TexDictionary::setCurrent(krosaLoadedTXD);
+        return true;
+    }
+    krosaLoadedTXD = rw::TexDictionary::create();
+    if (!krosaLoadedTXD) { krosaTXDValidationStatus = -1; return false; }
+    char paths[sizeof(krosaTXDPaths)];
+    std::strncpy(paths, krosaTXDPaths, sizeof(paths) - 1);
+    paths[sizeof(paths) - 1] = 0;
+    int loaded = 0;
+    char *save = nullptr;
+    for (char *path = std::strtok_r(paths, "\\n", &save); path; path = std::strtok_r(nullptr, "\\n", &save)) {
+        rw::StreamFile stream;
+        if (!stream.open(path, "rb")) continue;
+        const bool hasTXDChunk = rw::findChunk(&stream, rw::ID_TEXDICTIONARY, nullptr, nullptr);
+        rw::TexDictionary *dictionary = hasTXDChunk ? rw::TexDictionary::streamRead(&stream) : nullptr;
+        stream.close();
+        if (!dictionary) continue;
+        FORLIST(link, dictionary->textures) {
+            rw::Texture *texture = rw::Texture::fromDict(link);
+            dictionary->remove(texture);
+            krosaLoadedTXD->add(texture);
+        }
+        dictionary->destroy();
+        ++loaded;
+    }
+    rw::TexDictionary::setCurrent(krosaLoadedTXD);
+    krosaTXDValidationStatus = loaded;
+    return true;
+}
 
 // Positive codes identify the exact rejected field; 1000+ encodes
 // atomicIndex*100 + geometryFailure so the device can report which atomic failed.
