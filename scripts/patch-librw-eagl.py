@@ -201,6 +201,6 @@ edit("src/gl/gl3render.cpp", [
      'krosaGL3MaxGreen=krosaGL3PreBluePixels=-1; krosaGL3FogUniform[0]=krosaGL3FogUniform[1]=krosaGL3FogUniform[2]=krosaGL3FogUniform[3]=-1.0f; }'),
     ('case 13:return krosaGL3PreBluePixels;default:return -1;',
      'case 13:return krosaGL3PreBluePixels;case 14:return (int)(krosaGL3FogUniform[0]*1000.0f);case 15:return (int)(krosaGL3FogUniform[1]*1000.0f);case 16:return (int)(krosaGL3FogUniform[2]*1000.0f);case 17:return (int)(krosaGL3FogUniform[3]*1000.0f);default:return -1;'),
-    ("\t\tdrawInst(header, inst);\n\t\t// Snapshot framebuffer BEFORE the diagnostic bypass to measure librw's own shader.",
-     "\t\tdrawInst(header, inst);\n\t\tif(program){ GLint fogLocation = glGetUniformLocation((GLuint)program, \"u_fogColor\"); if(fogLocation >= 0) glGetUniformfv((GLuint)program, fogLocation, krosaGL3FogUniform); }\n\t\t// Snapshot framebuffer BEFORE the diagnostic bypass to measure librw's own shader.")
+    ("\t\tdrawInst(header, inst);\n\t\t// Single-pixel diagnostic only; full-frame readbacks stall the iPhone GPU.",
+     "\t\tdrawInst(header, inst);\n\t\tif(program){ GLint fogLocation = glGetUniformLocation((GLuint)program, \"u_fogColor\"); if(fogLocation >= 0) glGetUniformfv((GLuint)program, fogLocation, krosaGL3FogUniform); }\n\t\t// Single-pixel diagnostic only; full-frame readbacks stall the iPhone GPU.")
 ])
