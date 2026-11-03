@@ -126,6 +126,51 @@ static int krosaClumpGL3Failure(rw::Clump *clump) {
     return 0;
 }
 
+
+static int krosaMaterialCount = 0;
+static int krosaMaterialTextureCount = 0;
+static int krosaMaterialRasterCount = 0;
+static int krosaMaterialMatchedTXDCount = 0;
+static char krosaMaterialReport[512] = {0};
+
+static void krosaInspectMaterials(rw::Clump *clump) {
+    krosaMaterialCount = krosaMaterialTextureCount = krosaMaterialRasterCount = krosaMaterialMatchedTXDCount = 0;
+    krosaMaterialReport[0] = 0;
+    if (!clump) return;
+    FORLIST(link, clump->atomics) {
+        rw::Atomic *atomic = rw::Atomic::fromClump(link);
+        rw::Geometry *geometry = atomic ? atomic->geometry : nullptr;
+        if (!geometry || !geometry->meshHeader) continue;
+        const rw::Mesh *meshes = geometry->meshHeader->getMeshes();
+        for (uint32_t i = 0; i < geometry->meshHeader->numMeshes; ++i) {
+            rw::Material *material = meshes[i].material;
+            if (!material) continue;
+            ++krosaMaterialCount;
+            rw::Texture *texture = material->texture;
+            if (!texture) continue;
+            ++krosaMaterialTextureCount;
+            if (texture->raster) ++krosaMaterialRasterCount;
+            if (texture->dict == krosaLoadedTXD) ++krosaMaterialMatchedTXDCount;
+            if (!krosaMaterialReport[0]) {
+                std::snprintf(krosaMaterialReport, sizeof(krosaMaterialReport),
+                    "MAT:%s MASK:%s R:%d D:%d", texture->name, texture->mask,
+                    texture->raster != nullptr, texture->dict == krosaLoadedTXD);
+            }
+        }
+    }
+}
+
+extern "C" void krosaGetMaterialDiagnostics(int *materials, int *textures, int *rasters, int *dictMatches, char *report, int capacity) {
+    if (materials) *materials = krosaMaterialCount;
+    if (textures) *textures = krosaMaterialTextureCount;
+    if (rasters) *rasters = krosaMaterialRasterCount;
+    if (dictMatches) *dictMatches = krosaMaterialMatchedTXDCount;
+    if (report && capacity > 0) {
+        std::strncpy(report, krosaMaterialReport, (size_t)capacity - 1);
+        report[capacity - 1] = 0;
+    }
+}
+
 extern "C" void krosaGetTXDDiagnostics(int *paths, int *opened, int *chunks, int *dicts, int *textures) {
     if (paths) *paths = krosaTXDPathCount;
     if (opened) *opened = krosaTXDOpenCount;
@@ -173,6 +218,7 @@ static bool krosaLoadDFFIfAvailable() {
         return false;
     }
     krosaDFFValidationStatus = 1;
+    krosaInspectMaterials(krosaLoadedClump);
     rw::V3d center = {0.0f, 0.0f, 0.0f};
     int count = 0;
     FORLIST(link, krosaLoadedClump->atomics) {
