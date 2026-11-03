@@ -17,6 +17,7 @@ static int krosaLastGeometryDrawFlags = 0;
 static int krosaLastGeometryInitStatus = 0;
 static rw::Frame *krosaSceneFrame = nullptr;
 static rw::World *krosaSceneWorld = nullptr;
+static rw::Light *krosaSceneAmbientLight = nullptr;
 static rw::Atomic *krosaSceneAtomic = nullptr;
 static rw::gl3::ObjPipeline *krosaScenePipeline = nullptr;
 static bool krosaSceneReady = false;
@@ -145,6 +146,11 @@ extern "C" void krosaLibrwGL3Shutdown(void) {
     }
     if (rw::engine && rw::engine->currentWorld == krosaSceneWorld)
         rw::engine->currentWorld = nullptr;
+    if (krosaSceneWorld && krosaSceneAmbientLight) {
+        krosaSceneWorld->removeLight(krosaSceneAmbientLight);
+        krosaSceneAmbientLight->destroy();
+        krosaSceneAmbientLight = nullptr;
+    }
     if (krosaSceneWorld) {
         krosaSceneWorld->destroy();
         krosaSceneWorld = nullptr;
@@ -334,6 +340,13 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
                 krosaSceneFrame = rw::Frame::create();
                 krosaSceneAtomic = rw::Atomic::create();
                 krosaSceneWorld = rw::World::create(nullptr);
+                if (krosaSceneWorld) {
+                    krosaSceneAmbientLight = rw::Light::create(rw::Light::AMBIENT);
+                    if (krosaSceneAmbientLight) {
+                        krosaSceneAmbientLight->setColor(0.55f, 0.55f, 0.55f);
+                        krosaSceneWorld->addLight(krosaSceneAmbientLight);
+                    }
+                }
                 if (rw::engine) rw::engine->currentWorld = krosaSceneWorld;
                 krosaScenePipeline = rw::gl3::makeDefaultPipeline();
                 if (krosaSceneFrame && krosaSceneAtomic && krosaSceneWorld && krosaScenePipeline && geometry->meshHeader) {
@@ -358,6 +371,11 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
             }
             if (krosaSceneFrame) { krosaSceneFrame->destroy(); krosaSceneFrame = nullptr; }
             if (rw::engine && rw::engine->currentWorld == krosaSceneWorld) rw::engine->currentWorld = nullptr;
+            if (krosaSceneWorld && krosaSceneAmbientLight) {
+                krosaSceneWorld->removeLight(krosaSceneAmbientLight);
+                krosaSceneAmbientLight->destroy();
+                krosaSceneAmbientLight = nullptr;
+            }
             if (krosaSceneWorld) { krosaSceneWorld->destroy(); krosaSceneWorld = nullptr; }
             if (krosaScenePipeline) { krosaScenePipeline->destroy(); krosaScenePipeline = nullptr; }
             return -6;
