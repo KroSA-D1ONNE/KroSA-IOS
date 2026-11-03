@@ -188,8 +188,7 @@ int krosaGetGL3DrawMetric(int i) { switch(i){case 0:return krosaGL3IndexCount;ca
 		GLubyte pixel[4] = {0,0,0,0};
 		glReadPixels(glGlobals.presentWidth/2, glGlobals.presentHeight/2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
 		krosaGL3Pixel[0]=pixel[0]; krosaGL3Pixel[1]=pixel[1]; krosaGL3Pixel[2]=pixel[2];
-		if(glGetError() == GL_NO_ERROR) krosaGL3DrawFlags |= 256;
-		}""")
+		if(glGetError() == GL_NO_ERROR) krosaGL3DrawFlags |= 256;""")
 ])
 
 # Read back the actual GPU-side fog uniform after librw flushes it.
