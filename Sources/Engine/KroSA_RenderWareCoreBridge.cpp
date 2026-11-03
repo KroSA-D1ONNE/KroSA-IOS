@@ -167,47 +167,13 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
         return -5;
 
     if (!krosaSceneReady) {
-        rw::Raster *textureRaster = rw::Raster::create(
-            8, 8, 32, rw::Raster::TEXTURE | rw::Raster::C8888);
-        rw::Texture *texture = textureRaster ? rw::Texture::create(textureRaster) : nullptr;
-        if (textureRaster && !texture) {
-            textureRaster->destroy();
-            textureRaster = nullptr;
-        }
-        if (texture) {
-            texture->setFilter(rw::Texture::NEAREST);
-            texture->setAddressU(rw::Texture::CLAMP);
-            texture->setAddressV(rw::Texture::CLAMP);
-            rw::uint8 *texels = textureRaster->lock(
-                0, rw::Raster::LOCKWRITE | rw::Raster::LOCKNOFETCH);
-            if (texels) {
-                for (int y = 0; y < 8; ++y) {
-                    for (int x = 0; x < 8; ++x) {
-                        const bool light = ((x / 2) + (y / 2)) % 2 == 0;
-                        const size_t offset = (size_t(y) * 8 + size_t(x)) * 4;
-                        texels[offset + 0] = light ? 35 : 5;
-                        texels[offset + 1] = light ? 245 : 105;
-                        texels[offset + 2] = light ? 65 : 20;
-                        texels[offset + 3] = 255;
-                    }
-                }
-                textureRaster->unlock(0);
-            } else {
-                texture->destroy();
-                texture = nullptr;
-            }
-        }
-
         rw::Geometry *geometry = rw::Geometry::create(
             24, 12, rw::Geometry::POSITIONS | rw::Geometry::PRELIT);
         rw::Material *material = geometry ? rw::Material::create() : nullptr;
         bool built = false;
 
-        if (geometry && material && texture) {
+        if (geometry && material) {
             material->color = {255, 255, 255, 255};
-            material->setTexture(texture);
-            texture->destroy();
-            texture = nullptr;
 
             if (geometry->matList.appendMaterial(material) >= 0) {
                 rw::MorphTarget *target = &geometry->morphTargets[0];
@@ -258,7 +224,6 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
             }
         }
 
-        if (texture) texture->destroy();
         if (material) material->destroy();
         if (geometry) geometry->destroy();
         krosaSceneReady = built;
