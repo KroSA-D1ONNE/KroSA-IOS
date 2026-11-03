@@ -407,9 +407,18 @@ private struct GLES2TextureView: UIViewRepresentable {
                 }
             }
 
-            // Draw a known-good GLES2 marker AFTER librw. If this yellow triangle
-            // survives, GLKView's drawable/presentation path is still usable and
-            // the remaining fault is inside librw's geometry submission/output.
+            // Read draw and full-frame coverage metrics captured inside librw.
+            let metrics = (0...17).map { krosaGetLastGeometryMetric(Int32($0)) }
+            let flags = krosaGetLastGeometryDrawFlags()
+            let framebuffer = krosaGetLastGeometryFramebuffer()
+            let viewport = (0...3).map { krosaGetLastGeometryViewport(Int32($0)) }
+            let report = "FLAGS:\(flags) MESH:\(metrics[3]) IDX:\(metrics[0]) VTX:\(metrics[2])\\nPIXELS:\(metrics[5]) BOX:\(metrics[6]),\(metrics[7])-\(metrics[8]),\(metrics[9]) BLUE:\(metrics[10])\\nFBO:\(framebuffer) VP:\(viewport)"
+            if lastDiagnosticsReport != report {
+                lastDiagnosticsReport = report
+                DispatchQueue.main.async { [weak self] in self?.onDiagnostics?(report) }
+            }
+
+            // Draw the known-good GLES2 marker after librw.
             drawSentinelTriangle(width: drawableWidth, height: drawableHeight)
         }
 
