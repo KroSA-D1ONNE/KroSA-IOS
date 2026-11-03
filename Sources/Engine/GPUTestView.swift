@@ -118,6 +118,7 @@ private struct GLES2TextureView: UIViewRepresentable {
     let onContextValidated: (Bool) -> Void
     let onGL3Initialized: (Int32) -> Void
     let onGeometryDrawn: (Int32) -> Void
+    let onDiagnostics: (String) -> Void
 
     func makeCoordinator() -> Renderer { Renderer() }
 
