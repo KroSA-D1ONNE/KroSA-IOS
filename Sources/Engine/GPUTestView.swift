@@ -30,12 +30,16 @@ struct GPUTestView: View {
                     .foregroundStyle(.white.opacity(0.7))
 
                 if showLibrwTest {
-                    GLESTriangleTestView()
+                    GLES2TextureView(
+                        onContextValidated: { ok in nativeGLStatus = ok ? "EAGL CONTEXTO: OK" : "EAGL CONTEXTO: ERROR" },
+                        onGL3Initialized: { status in librwGL3Status = "LIBRW GL3 INIT: \(status)" },
+                        onGeometryDrawn: { result in geometryStatus = "LIBRW DRAW: \(result)" }
+                    )
                         .frame(maxWidth: .infinity)
                         .frame(height: 300)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.green.opacity(0.35), lineWidth: 1))
-                    Text("PRUEBA GLES2 · SHADERS PROPIOS · SIN LIBRW")
+                    Text("LIBRW GL3 + TRIÁNGULO GLES2 DE CONTROL")
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
                         .foregroundStyle(.white.opacity(0.55))
                 } else {
@@ -190,6 +194,7 @@ private struct GLES2TextureView: UIViewRepresentable {
         let glContext: EAGLContext?
         private var textureID: GLuint = 0
         private let effect = GLKBaseEffect()
+        private var sentinelProgram: GLuint = 0
         var onContextValidated: ((Bool) -> Void)?
         var onGL3Initialized: ((Int32) -> Void)?
         var onGeometryDrawn: ((Int32) -> Void)?
@@ -266,6 +271,63 @@ private struct GLES2TextureView: UIViewRepresentable {
             hostView?.setNeedsDisplay()
         }
 
+        private func buildSentinelProgram() -> GLuint {
+            let vertexSource = "attribute vec2 aPosition; void main(){ gl_Position = vec4(aPosition, 0.0, 1.0); }"
+            let fragmentSource = "precision mediump float; void main(){ gl_FragColor = vec4(1.0, 0.82, 0.12, 1.0); }"
+            func compile(_ type: GLenum, _ source: String) -> GLuint {
+                let shader = glCreateShader(type)
+                guard shader != 0 else { return 0 }
+                source.withCString { pointer in
+                    var sourcePointer: UnsafePointer<GLchar>? = UnsafeRawPointer(pointer).assumingMemoryBound(to: GLchar.self)
+                    glShaderSource(shader, 1, &sourcePointer, nil)
+                }
+                glCompileShader(shader)
+                var status: GLint = 0
+                glGetShaderiv(shader, GLenum(GL_COMPILE_STATUS), &status)
+                if status != GL_TRUE { glDeleteShader(shader); return 0 }
+                return shader
+            }
+            let vertex = compile(GLenum(GL_VERTEX_SHADER), vertexSource)
+            let fragment = compile(GLenum(GL_FRAGMENT_SHADER), fragmentSource)
+            guard vertex != 0, fragment != 0 else {
+                if vertex != 0 { glDeleteShader(vertex) }
+                if fragment != 0 { glDeleteShader(fragment) }
+                return 0
+            }
+            let linked = glCreateProgram()
+            glAttachShader(linked, vertex)
+            glAttachShader(linked, fragment)
+            glBindAttribLocation(linked, 0, "aPosition")
+            glLinkProgram(linked)
+            glDeleteShader(vertex)
+            glDeleteShader(fragment)
+            var status: GLint = 0
+            glGetProgramiv(linked, GLenum(GL_LINK_STATUS), &status)
+            if status != GL_TRUE { glDeleteProgram(linked); return 0 }
+            return linked
+        }
+
+        private func drawSentinelTriangle(width: Int32, height: Int32) {
+            if sentinelProgram == 0 { sentinelProgram = buildSentinelProgram() }
+            guard sentinelProgram != 0 else { return }
+            let vertices: [GLfloat] = [0.0, 0.72, -0.68, -0.58, 0.68, -0.58]
+            glViewport(0, 0, width, height)
+            glDisable(GLenum(GL_DEPTH_TEST))
+            glDisable(GLenum(GL_CULL_FACE))
+            glDisable(GLenum(GL_SCISSOR_TEST))
+            glDisable(GLenum(GL_BLEND))
+            glUseProgram(sentinelProgram)
+            glEnableVertexAttribArray(0)
+            vertices.withUnsafeBufferPointer { buffer in
+                guard let base = buffer.baseAddress else { return }
+                glVertexAttribPointer(0, 2, GLenum(GL_FLOAT), GLboolean(GL_FALSE), 0, UnsafeRawPointer(base))
+                glDrawArrays(GLenum(GL_TRIANGLES), 0, 3)
+            }
+            glDisableVertexAttribArray(0)
+            glUseProgram(0)
+            glFlush()
+        }
+
         func glkView(_ view: GLKView, drawIn rect: CGRect) {
             guard let glContext, EAGLContext.setCurrent(glContext) else { return }
             // SwiftUI may invoke the delegate before the first non-zero layout.
@@ -333,9 +395,18 @@ private struct GLES2TextureView: UIViewRepresentable {
                     self?.onGeometryDrawn?(result)
                 }
             }
+
+            // Draw a known-good GLES2 marker AFTER librw. If this yellow triangle
+            // survives, GLKView's drawable/presentation path is still usable and
+            // the remaining fault is inside librw's geometry submission/output.
+            drawSentinelTriangle(width: drawableWidth, height: drawableHeight)
         }
 
         deinit {
+            if sentinelProgram != 0 {
+                if let glContext { _ = EAGLContext.setCurrent(glContext) }
+                glDeleteProgram(sentinelProgram)
+            }
             if textureID != 0 {
                 if let glContext {
                     _ = EAGLContext.setCurrent(glContext)
