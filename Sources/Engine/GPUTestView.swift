@@ -161,7 +161,7 @@ private struct GLES2TextureView: UIViewRepresentable {
         view.drawableColorFormat = .RGBA8888
         view.drawableDepthFormat = .format16
         view.isOpaque = true
-        // GLKView is driven by an explicit 30 FPS display link below.
+        // GLKView is driven by an explicit 60 FPS display link below.
         view.enableSetNeedsDisplay = false
         let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Renderer.handlePan(_:)))
         let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Renderer.handlePinch(_:)))
@@ -263,7 +263,7 @@ private struct GLES2TextureView: UIViewRepresentable {
         func startRendering() {
             guard displayLink == nil else { return }
             let link = CADisplayLink(target: self, selector: #selector(renderNextFrame))
-            link.preferredFramesPerSecond = 30
+            link.preferredFramesPerSecond = 60
             link.add(to: .main, forMode: .common)
             displayLink = link
         }
