@@ -7,6 +7,7 @@
 #define RW_GL3
 #define LIBRW_EAGL
 #include "rw.h"
+extern "C" int krosaGetEAGLInitStatus(void);
 
 extern "C" void krosaResetGL3DrawDiagnostics(void);
 extern "C" int krosaGetGL3DrawDiagnostics(void);
@@ -170,6 +171,7 @@ extern "C" void krosaLibrwGL3Shutdown(void) {
 }
 
 extern "C" int krosaGetLastGeometryInitStatus(void) { return krosaLastGeometryInitStatus; }
+extern "C" int krosaGetLastEAGLInitStatus(void) { return krosaGetEAGLInitStatus(); }
 extern "C" int krosaGetLastGeometryDrawFlags(void) { return krosaLastGeometryDrawFlags; }
 extern "C" int krosaGetLastGeometryPixel(int i) { return krosaGetGL3DrawPixel(i); }
 extern "C" int krosaGetLastGeometryFramebuffer(void) { return krosaGetGL3DrawFramebuffer(); }
