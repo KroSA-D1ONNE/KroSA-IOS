@@ -213,7 +213,7 @@ private struct GLES2TextureView: UIViewRepresentable {
         private var lastReportedGeometryResult: Int32?
         weak var hostView: GLKView?
         private var displayLink: CADisplayLink?
-        private var cameraYaw: Float = 0.62
+        private var cameraYaw: Float = 1.57
         private var cameraPitch: Float = 0.38
         private var cameraDistance: Float = 3.2
         private var lastPanPoint = CGPoint.zero
