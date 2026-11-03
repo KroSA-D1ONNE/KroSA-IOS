@@ -432,8 +432,8 @@ private struct GLES2TextureView: UIViewRepresentable {
             let texturePathReport = "UV:\(uvEnabled)/\(uvBuffer)/\(uvSize)/\(uvStride) TEX0:\(textureBinding) SAMPLER:\(sampler) ACTIVE:\(activeUnit) "
             var uploadWidth: Int32 = -1, uploadHeight: Int32 = -1, uploadFormat: Int32 = -1, uploadError: Int32 = -1
             krosaGetRasterUploadDiagnostics(&uploadWidth, &uploadHeight, &uploadFormat, &uploadError)
-            let rasterUploadReport = "UPLOAD:\\(uploadWidth)x\\(uploadHeight)/FMT:\\(uploadFormat)/ERR:\\(uploadError) "
-            let report = "EAGL:\(eaglStatus) DFF:\(dffStatus) TXD:\(txdPaths)/\(txdOpened)/\(txdChunks)/\(txdDicts)/\(txdTextures) MAT:\(materialCount)/\(materialTextures)/\(materialRasters)/\(materialDictMatches) \(materialReport) \(texturePathReport)FLAGS:\(flags) MESH:\(metrics[3]) IDX:\(metrics[0]) VTX:\(metrics[2])\\nPIXELS:\(metrics[5]) BOX:\(metrics[6]),\(metrics[7])-\(metrics[8]),\(metrics[9]) BLUE:\(metrics[10])\\nFBO:\(framebuffer) VP:\(viewport)\\nSHADER_STAGE: \(shaderStage) (0=none,1=vertex,2=fragment,3=link)\\nSHADER: \(shaderError)"
+            let rasterUploadReport = "UPLOAD:\(uploadWidth)x\(uploadHeight)/FMT:\(uploadFormat)/ERR:\(uploadError) "
+            let report = "EAGL:\(eaglStatus) DFF:\(dffStatus) TXD:\(txdPaths)/\(txdOpened)/\(txdChunks)/\(txdDicts)/\(txdTextures) MAT:\(materialCount)/\(materialTextures)/\(materialRasters)/\(materialDictMatches) \(materialReport) \(texturePathReport)\(rasterUploadReport)FLAGS:\(flags) MESH:\(metrics[3]) IDX:\(metrics[0]) VTX:\(metrics[2])\nPIXELS:\(metrics[5]) BOX:\(metrics[6]),\(metrics[7])-\(metrics[8]),\(metrics[9]) BLUE:\(metrics[10])\nFBO:\(framebuffer) VP:\(viewport)\nSHADER_STAGE: \(shaderStage) (0=none,1=vertex,2=fragment,3=link)\nSHADER: \(shaderError)"
             if lastDiagnosticsReport != report {
                 lastDiagnosticsReport = report
                 DispatchQueue.main.async { [weak self] in self?.onDiagnostics?(report) }
