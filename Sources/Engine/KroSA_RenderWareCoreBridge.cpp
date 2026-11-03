@@ -29,6 +29,39 @@ extern "C" void krosaLibrwGL3SetDFFPath(const char *path) {
     krosaDFFPath[sizeof(krosaDFFPath) - 1] = 0;
 }
 
+static bool krosaGeometryCanUseGL3(const rw::Geometry *geometry) {
+    if (!geometry || (geometry->flags & rw::Geometry::NATIVE) ||
+        !geometry->meshHeader || geometry->numVertices <= 0 ||
+        geometry->numMorphTargets <= 0 || !geometry->morphTargets ||
+        !geometry->morphTargets[0].vertices ||
+        geometry->meshHeader->numMeshes == 0 ||
+        geometry->meshHeader->totalIndices == 0)
+        return false;
+
+    const rw::Mesh *meshes = geometry->meshHeader->getMeshes();
+    if (!meshes) return false;
+    for (uint32_t i = 0; i < geometry->meshHeader->numMeshes; ++i) {
+        const rw::Mesh &mesh = meshes[i];
+        if (!mesh.indices || mesh.numIndices == 0 || !mesh.material)
+            return false;
+        for (uint32_t j = 0; j < mesh.numIndices; ++j) {
+            if (mesh.indices[j] >= geometry->numVertices)
+                return false;
+        }
+    }
+    return true;
+}
+
+static bool krosaClumpCanUseGL3(const rw::Clump *clump) {
+    if (!clump || clump->countAtomics() == 0) return false;
+    FORLIST(link, clump->atomics) {
+        const rw::Atomic *atomic = rw::Atomic::fromClump(link);
+        if (!atomic || !krosaGeometryCanUseGL3(atomic->geometry))
+            return false;
+    }
+    return true;
+}
+
 static bool krosaLoadDFFIfAvailable() {
     if (krosaLoadedClump || krosaDFFPath[0] == 0) return krosaLoadedClump != nullptr;
     rw::StreamFile stream;
@@ -36,7 +69,10 @@ static bool krosaLoadDFFIfAvailable() {
     if (rw::findChunk(&stream, rw::ID_CLUMP, nullptr, nullptr))
         krosaLoadedClump = rw::Clump::streamRead(&stream);
     stream.close();
-    if (!krosaLoadedClump || krosaLoadedClump->countAtomics() == 0) {
+    if (!krosaClumpCanUseGL3(krosaLoadedClump)) {
+        // Some GTA DFFs contain native/plugin geometry that this generic GL3
+        // pipeline cannot instance. Reject the model before librw dereferences
+        // its MeshHeader; keep the diagnostic cube alive instead of crashing.
         if (krosaLoadedClump) krosaLoadedClump->destroy();
         krosaLoadedClump = nullptr;
         return false;
