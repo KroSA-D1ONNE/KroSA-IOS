@@ -240,6 +240,7 @@ p.write_text(
     '"uniform mat4 u_view;\\n"\n'
     '"uniform mat4 u_world;\\n"\n'
     '"uniform vec4 u_matColor;\\n"\n'
+    '"float DoFog(float depth) { return 0.0; }\\n"'
     ';\n'
 )
 p = ROOT / "src/gl/shaders/default_vs_gl.inc"
