@@ -23,7 +23,7 @@ int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angleY, float an
 /// Releases the test scene and GL3 device while the owning EAGL context is current.
 void krosaLibrwGL3Shutdown(void);
 /// Sets the optional user-provided DFF path; the file is streamed only after GL3 is ready.
-void krosaLibrwGL3SetDFFPath(const char *path);
+void krosaLibrwGL3SetDFFPath(const char *path);\n/// Sets newline-separated TXD paths; dictionaries are merged before the DFF is streamed.\nvoid krosaLibrwGL3SetTXDPaths(const char *paths);
 int krosaGetLastGeometryInitStatus(void);
 /// EAGL backend stage: -1 loader failed, -2 no GL version, -3 GL3 init failed, 2 ready.
 int krosaGetLastEAGLInitStatus(void);
