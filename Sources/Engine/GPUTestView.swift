@@ -421,6 +421,7 @@ private struct GLES2TextureView: UIViewRepresentable {
             var txdPaths: Int32 = 0, txdOpened: Int32 = 0, txdChunks: Int32 = 0, txdDicts: Int32 = 0, txdTextures: Int32 = 0
             krosaGetTXDDiagnostics(&txdPaths, &txdOpened, &txdChunks, &txdDicts, &txdTextures)
             let eaglStatus = krosaGetLastEAGLInitStatus()
+            let shaderStage = krosaGetEAGLShaderStage()
             let shaderError = String(cString: krosaGetEAGLShaderError())
             let report = "EAGL:\(eaglStatus) DFF:\(dffStatus) TXD:\(txdPaths)/\(txdOpened)/\(txdChunks)/\(txdDicts)/\(txdTextures) FLAGS:\(flags) MESH:\(metrics[3]) IDX:\(metrics[0]) VTX:\(metrics[2])\\nPIXELS:\(metrics[5]) BOX:\(metrics[6]),\(metrics[7])-\(metrics[8]),\(metrics[9]) BLUE:\(metrics[10])\\nFBO:\(framebuffer) VP:\(viewport)\\nSHADER: \(shaderError)"
             if lastDiagnosticsReport != report {
