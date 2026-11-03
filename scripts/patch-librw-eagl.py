@@ -401,8 +401,8 @@ if decl not in hs:
 header.write_text(hs)
 
 
-// Trace entry into both texture ingestion paths, not only the native DXT branch.
-// This distinguishes "TXD parsed" from "GL3 texture reader / image rasterizer invoked".
+# Trace entry into both texture ingestion paths, not only the native DXT branch.
+# This distinguishes "TXD parsed" from "GL3 texture reader / image rasterizer invoked".
 p = ROOT / "src/gl/gl3raster.cpp"
 raster_source = p.read_text()
 path_diag = """
