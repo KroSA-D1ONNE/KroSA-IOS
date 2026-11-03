@@ -234,16 +234,16 @@ p.write_text(
     '"#define ATTRIB_POS 0\\n"\n'
     '"#define ATTRIB_COLOR 2\\n"\n'
     '"#define ATTRIB_TEXCOORDS0 5\\n"\n'
-    '"VSIN(ATTRIB_POS) vec3 in_pos;\\n"\n'
-    '"VSIN(ATTRIB_COLOR) vec4 in_color;\\n"\n'
-    '"VSIN(ATTRIB_TEXCOORDS0) vec2 in_tex0;\\n"\n'
+
+
+
     '"uniform mat4 u_proj;\\n"\n'
     '"uniform mat4 u_view;\\n"\n'
     '"uniform mat4 u_world;\\n"\n'
     '"uniform vec4 u_matColor;\\n"\n'
-    '"VSOUT vec4 v_color;\\n"\n'
-    '"VSOUT vec2 v_tex0;\\n"\n'
-    '"VSOUT float v_fog;\\n"\n'
+
+
+
     ';\n'
 )
 p = ROOT / "src/gl/shaders/default_vs_gl.inc"
