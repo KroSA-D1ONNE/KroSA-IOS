@@ -285,20 +285,20 @@ p.write_text(
 
 # Capture GLES texture-coordinate attribute and bound sampler state during setup.
 edit("src/gl/gl3render.cpp", [
-    ('\\tglBindBuffer(GL_ARRAY_BUFFER, header->vbo);\\n\\tsetAttribPointers(header->attribDesc, header->numAttribs);',
-     """\\tglBindBuffer(GL_ARRAY_BUFFER, header->vbo);
-\\tsetAttribPointers(header->attribDesc, header->numAttribs);
-\\tGLint uvEnabled=0, uvBuffer=0, uvSize=0, uvStride=0, program=0, activeUnit=0, sampler=0;
-\\tglGetVertexAttribiv(ATTRIB_TEXCOORDS0, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &uvEnabled);
-\\tglGetVertexAttribiv(ATTRIB_TEXCOORDS0, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING, &uvBuffer);
-\\tglGetVertexAttribiv(ATTRIB_TEXCOORDS0, GL_VERTEX_ATTRIB_ARRAY_SIZE, &uvSize);
-\\tglGetVertexAttribiv(ATTRIB_TEXCOORDS0, GL_VERTEX_ATTRIB_ARRAY_STRIDE, &uvStride);
-\\tglGetIntegerv(GL_CURRENT_PROGRAM, &program);
-\\tglGetIntegerv(GL_ACTIVE_TEXTURE, &activeUnit);
-\\tglActiveTexture(GL_TEXTURE0);
-\\tglGetIntegerv(GL_TEXTURE_BINDING_2D, &krosaTexBinding);
-\\tif(program){ GLint loc=glGetUniformLocation((GLuint)program, "tex0"); if(loc>=0) glGetUniformiv((GLuint)program, loc, &sampler); }
-\\tglActiveTexture((GLenum)activeUnit);
-\\tkrosaUVEnabled=uvEnabled; krosaUVBuffer=uvBuffer; krosaUVSize=uvSize; krosaUVStride=uvStride;
-\\tkrosaSampler=sampler; krosaActiveUnit=activeUnit;""")
+    ('\tglBindBuffer(GL_ARRAY_BUFFER, header->vbo);\n\tsetAttribPointers(header->attribDesc, header->numAttribs);',
+     """\tglBindBuffer(GL_ARRAY_BUFFER, header->vbo);
+\tsetAttribPointers(header->attribDesc, header->numAttribs);
+\tGLint uvEnabled=0, uvBuffer=0, uvSize=0, uvStride=0, program=0, activeUnit=0, sampler=0;
+\tglGetVertexAttribiv(ATTRIB_TEXCOORDS0, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &uvEnabled);
+\tglGetVertexAttribiv(ATTRIB_TEXCOORDS0, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING, &uvBuffer);
+\tglGetVertexAttribiv(ATTRIB_TEXCOORDS0, GL_VERTEX_ATTRIB_ARRAY_SIZE, &uvSize);
+\tglGetVertexAttribiv(ATTRIB_TEXCOORDS0, GL_VERTEX_ATTRIB_ARRAY_STRIDE, &uvStride);
+\tglGetIntegerv(GL_CURRENT_PROGRAM, &program);
+\tglGetIntegerv(GL_ACTIVE_TEXTURE, &activeUnit);
+\tglActiveTexture(GL_TEXTURE0);
+\tglGetIntegerv(GL_TEXTURE_BINDING_2D, &krosaTexBinding);
+\tif(program){ GLint loc=glGetUniformLocation((GLuint)program, "tex0"); if(loc>=0) glGetUniformiv((GLuint)program, loc, &sampler); }
+\tglActiveTexture((GLenum)activeUnit);
+\tkrosaUVEnabled=uvEnabled; krosaUVBuffer=uvBuffer; krosaUVSize=uvSize; krosaUVStride=uvStride;
+\tkrosaSampler=sampler; krosaActiveUnit=activeUnit;""")
 ])
