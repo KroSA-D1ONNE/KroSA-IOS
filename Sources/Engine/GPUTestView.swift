@@ -406,7 +406,8 @@ private struct GLES2TextureView: UIViewRepresentable {
             let flags = krosaGetLastGeometryDrawFlags()
             let framebuffer = krosaGetLastGeometryFramebuffer()
             let viewport = (0...3).map { krosaGetLastGeometryViewport(Int32($0)) }
-            let dffStatus = krosaGetLastDFFValidationStatus()\n            let report = "DFF:\(dffStatus) FLAGS:\(flags) MESH:\(metrics[3]) IDX:\(metrics[0]) VTX:\(metrics[2])\\nPIXELS:\(metrics[5]) BOX:\(metrics[6]),\(metrics[7])-\(metrics[8]),\(metrics[9]) BLUE:\(metrics[10])\\nFBO:\(framebuffer) VP:\(viewport)"
+            let dffStatus = krosaGetLastDFFValidationStatus()
+            let report = "DFF:\(dffStatus) FLAGS:\(flags) MESH:\(metrics[3]) IDX:\(metrics[0]) VTX:\(metrics[2])\\nPIXELS:\(metrics[5]) BOX:\(metrics[6]),\(metrics[7])-\(metrics[8]),\(metrics[9]) BLUE:\(metrics[10])\\nFBO:\(framebuffer) VP:\(viewport)"
             if lastDiagnosticsReport != report {
                 lastDiagnosticsReport = report
                 DispatchQueue.main.async { [weak self] in self?.onDiagnostics?(report) }
