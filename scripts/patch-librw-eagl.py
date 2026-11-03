@@ -61,8 +61,6 @@ edit("src/gl/gl3device.cpp", [
 ])
 
 edit("src/gl/gl3device.cpp", [
-    ('#else\nnot implemented\n#endif\n\nstatic int\ninitOpenGL(void)',
-     '#elif defined(LIBRW_EAGL)\nstatic int stopEAGL(void) { return 1; }\n#else\n#error "Unsupported GL3 host backend"\n#endif\n\nstatic int\ninitOpenGL(void)'),
     ('#else\n\tnot implemented\n#endif\n};\n\n}\n}',
      '''#elif defined(LIBRW_EAGL)
     static int deviceSystemEAGL(DeviceReq req, void *arg, int32 n)
