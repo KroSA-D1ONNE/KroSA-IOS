@@ -304,17 +304,38 @@ edit("src/gl/gl3render.cpp", [
 
 
 # Trace TXD raster creation, CPU locking, and actual GPU upload separately.
-edit("src/gl/gl3raster.cpp", [
-    ('namespace gl3 {',
-     'namespace gl3 {\\nstatic int krosaRasterCreateCount=0, krosaRasterLockCount=0, krosaRasterUnlockCount=0;\\nstatic int krosaUploadWidth=-1, krosaUploadHeight=-1, krosaUploadFormat=-1, krosaUploadError=-1;\\nextern "C" void krosaGetRasterUploadDiagnostics(int *w,int *h,int *format,int *error,int *created,int *locked,int *unlocked) { if(w)*w=krosaUploadWidth; if(h)*h=krosaUploadHeight; if(format)*format=krosaUploadFormat; if(error)*error=krosaUploadError; if(created)*created=krosaRasterCreateCount; if(locked)*locked=krosaRasterLockCount; if(unlocked)*unlocked=krosaRasterUnlockCount; }'),
-    ('rasterCreateTexture(Raster *raster)',
-     'rasterCreateTexture(Raster *raster)\\n\\tkrosaRasterCreateCount++; krosaUploadWidth=raster->width; krosaUploadHeight=raster->height; krosaUploadFormat=raster->format;'),
-    ('rasterLock(Raster *raster, int32 level, int32 lockMode)',
-     'rasterLock(Raster *raster, int32 level, int32 lockMode)\\n\\tkrosaRasterLockCount++;'),
-    ('rasterUnlock(Raster *raster, int32 level)',
-     'rasterUnlock(Raster *raster, int32 level)\\n\\tkrosaRasterUnlockCount++;'),
-    ('glPixelStorei(GL_UNPACK_ALIGNMENT, 1);',
-     'glPixelStorei(GL_UNPACK_ALIGNMENT, 1);'),
-    ('glTexImage2D(GL_TEXTURE_2D, level, natras->internalFormat,\\n\\t\\t\\t\\t\\t     raster->width, raster->height,\\n\\t\\t\\t\\t\\t     0, natras->format, natras->type, raster->pixels);',
-     'glTexImage2D(GL_TEXTURE_2D, level, natras->internalFormat,\\n\\t\\t\\t\\t\\t     raster->width, raster->height,\\n\\t\\t\\t\\t\\t     0, natras->format, natras->type, raster->pixels);\\n\\t\\t\\t\\tif(level == 0){ krosaUploadWidth=raster->width; krosaUploadHeight=raster->height; krosaUploadFormat=natras->internalFormat; krosaUploadError=glGetError(); }')
-])
+# Match C++ function bodies independent of tabs/spaces or line wrapping.
+import re
+
+p = ROOT / "src/gl/gl3raster.cpp"
+raster_source = p.read_text()
+
+def inject_once(pattern, replacement, label, flags=0):
+    global raster_source
+    raster_source, count = re.subn(pattern, replacement, raster_source, count=1, flags=flags)
+    if count != 1:
+        raise SystemExit(f"gl3raster.cpp: expected one {label} match, got {count}")
+
+inject_once(
+    r"namespace gl3\\s*\\{",
+    lambda m: m.group(0) + """
+static int krosaRasterCreateCount=0, krosaRasterLockCount=0, krosaRasterUnlockCount=0;
+static int krosaUploadWidth=-1, krosaUploadHeight=-1, krosaUploadFormat=-1, krosaUploadError=-1;
+extern "C" void krosaGetRasterUploadDiagnostics(int *w,int *h,int *format,int *error,int *created,int *locked,int *unlocked) {
+    if(w)*w=krosaUploadWidth; if(h)*h=krosaUploadHeight; if(format)*format=krosaUploadFormat; if(error)*error=krosaUploadError;
+    if(created)*created=krosaRasterCreateCount; if(locked)*locked=krosaRasterLockCount; if(unlocked)*unlocked=krosaRasterUnlockCount;
+}
+""",
+    "namespace declaration"
+)
+inject_once(r"(rasterCreateTexture\\(Raster \\*raster\\)\\s*\\{)", r"\\1\\n    krosaRasterCreateCount++; krosaUploadWidth=raster->width; krosaUploadHeight=raster->height; krosaUploadFormat=raster->format;", "rasterCreateTexture")
+inject_once(r"(rasterLock\\(Raster \\*raster, int32 level, int32 lockMode\\)\\s*\\{)", r"\\1\\n    krosaRasterLockCount++;", "rasterLock")
+inject_once(r"(rasterUnlock\\(Raster \\*raster, int32 level\\)\\s*\\{)", r"\\1\\n    krosaRasterUnlockCount++;", "rasterUnlock")
+inject_once(
+    r"(glTexImage2D\\s*\\(\\s*GL_TEXTURE_2D\\s*,\\s*level\\s*,\\s*natras->internalFormat\\s*,.*?raster->pixels\\s*\\);)",
+    r"\\1\\n        if(level == 0){ krosaUploadWidth=raster->width; krosaUploadHeight=raster->height; krosaUploadFormat=natras->internalFormat; krosaUploadError=glGetError(); }",
+    "glTexImage2D upload",
+    re.DOTALL
+)
+p.write_text(raster_source)
+print("Applied iOS EAGL host patch to pinned librw source")
