@@ -1,7 +1,11 @@
 #ifndef KROSA_RENDERWARE_CORE_BRIDGE_H
 #define KROSA_RENDERWARE_CORE_BRIDGE_H
 
-const char *krosaGetEAGLShaderError(void);\n\n#ifdef __cplusplus
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+const char *krosaGetEAGLShaderError(void);
 extern "C" {
 #endif
 
