@@ -310,10 +310,6 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
         krosaLastGeometryDrawFlags = krosaGetGL3DrawDiagnostics();
         glFinish();
 
-        GLint currentProgram = 0, arrayBuffer = 0, elementBuffer = 0;
-        glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
-        glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &arrayBuffer);
-        glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &elementBuffer);
         const GLenum drawError = glGetError();
         const GLint sampleX = hostViewport[0] + hostViewport[2] / 2;
         const GLint sampleY = hostViewport[1] + hostViewport[3] / 2;
@@ -323,11 +319,11 @@ extern "C" int krosaLibrwGL3GeometrySmokeTest(int width, int height, float angle
         const bool greenPixel =
             centerPixel[1] > centerPixel[0] + 35 && centerPixel[1] > centerPixel[2] + 20;
 
-        if (currentProgram == 0)
-            result = -2001;
-        else if (arrayBuffer == 0 || elementBuffer == 0)
-            result = -2002;
-        else if (drawError != GL_NO_ERROR)
+        // Do not treat GL_CURRENT_PROGRAM or buffer bindings as draw-success
+        // criteria: librw's GL3 pipeline may legitimately unbind them after
+        // submission. The GL error state and sampled output are the meaningful
+        // checks here; the detailed pipeline diagnostics remain available above.
+        if (drawError != GL_NO_ERROR)
             result = -2100 - (int)drawError;
         else if (readError != GL_NO_ERROR)
             result = -2200 - (int)readError;
