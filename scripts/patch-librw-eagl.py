@@ -226,19 +226,35 @@ edit("src/gl/gl3render.cpp", [
      "\t\tdrawInst(header, inst);\n\t\tif(program){ GLint fogLocation = glGetUniformLocation((GLuint)program, \"u_fogColor\"); if(fogLocation >= 0) glGetUniformfv((GLuint)program, fogLocation, krosaGL3FogUniform); }\n\t\t// Single-pixel diagnostic only; full-frame readbacks stall the iPhone GPU.")
 ])
 
-# OpenGL ES 2 shader compilers on some iOS devices reject the dynamic
-# uniform-array light loop in this vertex shader. Keep this diagnostic
-# renderer unlit until the base EAGL shader pipeline is confirmed.
+# Replace upstream's complex default vertex shader with a minimal GLES 2
+# compatible shader. This isolates EAGL compilation from desktop GLSL paths.
 p = ROOT / "src/gl/shaders/header_vs.inc"
-s = p.read_text()
-start = s.find('"vec3 DoDynamicLight(vec3 V, vec3 N)\\n"')
-end = s.find('"float DoFog(float w)\\n"', start)
-if start < 0 or end < 0 or end <= start:
-    raise SystemExit("header_vs.inc: cannot isolate DoDynamicLight")
-s = s[:start] + (
-    '"vec3 DoDynamicLight(vec3 V, vec3 N)\\n"\n'
+p.write_text(
+    'const char *header_vert_src =\n'
+    '"#define ATTRIB_POS 0\\n"\n'
+    '"#define ATTRIB_COLOR 2\\n"\n'
+    '"#define ATTRIB_TEXCOORDS0 5\\n"\n'
+    '"VSIN(ATTRIB_POS) vec3 in_pos;\\n"\n'
+    '"VSIN(ATTRIB_COLOR) vec4 in_color;\\n"\n'
+    '"VSIN(ATTRIB_TEXCOORDS0) vec2 in_tex0;\\n"\n'
+    '"uniform mat4 u_proj;\\n"\n'
+    '"uniform mat4 u_view;\\n"\n'
+    '"uniform mat4 u_world;\\n"\n'
+    '"uniform vec4 u_matColor;\\n"\n'
+    '"VSOUT vec4 v_color;\\n"\n'
+    '"VSOUT vec2 v_tex0;\\n"\n'
+    '"VSOUT float v_fog;\\n"\n'
+    ';\n'
+)
+p = ROOT / "src/gl/shaders/default_vs_gl.inc"
+p.write_text(
+    'const char *default_vert_src =\n'
+    '"void main(void)\\n"\n'
     '"{\\n"\n'
-    '"\\treturn vec3(0.0);\\n"\n'
-    '"}\\n"\n\n'
-) + s[end:]
-p.write_text(s)
+    '"    gl_Position = u_proj * u_view * u_world * vec4(in_pos, 1.0);\\n"\n'
+    '"    v_color = in_color * u_matColor;\\n"\n'
+    '"    v_tex0 = in_tex0;\\n"\n'
+    '"    v_fog = 0.0;\\n"\n'
+    '"}\\n"\n'
+    ';\n'
+)
