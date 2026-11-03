@@ -364,7 +364,7 @@ if "krosaGetDXTDiagnostics" not in raster_source:
 
 # Record the exact native TXD metadata before deciding whether DXT is supported.
 import re
-pattern = r"if\\(flags & 2\\)\\s*\\{\\s*if\\(!gl3Caps\\.dxtSupported\\)\\s*\\{"
+pattern = r"if\(flags & 2\)\s*\{\s*if\(!gl3Caps\.dxtSupported\)\s*\{"
 repl = """if(flags & 2){
         krosaDXTSeen++;
         krosaDXTSupported = gl3Caps.dxtSupported ? 1 : 0;
@@ -379,8 +379,8 @@ if count != 1:
     raise SystemExit(f"gl3raster.cpp: native TXD DXT decision expected once, got {count}")
 
 # Record compressed upload bytes and the GLES error, regardless of indentation.
-pattern = r"(glCompressedTexImage2D\\s*\\(\\s*GL_TEXTURE_2D\\s*,\\s*level\\s*,\\s*natras->internalFormat\\s*,.*?raster->pixels\\s*\\);)"
-repl = r"""\\1
+pattern = r"(glCompressedTexImage2D\s*\(\s*GL_TEXTURE_2D\s*,\s*level\s*,\s*natras->internalFormat\s*,.*?raster->pixels\s*\);)"
+repl = r"""\1
                 krosaDXTUploadCalls++;
                 krosaDXTUploadBytes = getLevelSize(raster, level);
                 krosaDXTUploadError = glGetError();"""
