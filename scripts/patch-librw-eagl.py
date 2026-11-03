@@ -317,7 +317,7 @@ def inject_once(pattern, replacement, label, flags=0):
         raise SystemExit(f"gl3raster.cpp: expected one {label} match, got {count}")
 
 inject_once(
-    r"namespace gl3\\s*\\{",
+    r"namespace gl3\s*\{",
     lambda m: m.group(0) + """
 static int krosaRasterCreateCount=0, krosaRasterLockCount=0, krosaRasterUnlockCount=0;
 static int krosaUploadWidth=-1, krosaUploadHeight=-1, krosaUploadFormat=-1, krosaUploadError=-1;
@@ -328,12 +328,12 @@ extern "C" void krosaGetRasterUploadDiagnostics(int *w,int *h,int *format,int *e
 """,
     "namespace declaration"
 )
-inject_once(r"(rasterCreateTexture\\(Raster \\*raster\\)\\s*\\{)", r"\\1\\n    krosaRasterCreateCount++; krosaUploadWidth=raster->width; krosaUploadHeight=raster->height; krosaUploadFormat=raster->format;", "rasterCreateTexture")
-inject_once(r"(rasterLock\\(Raster \\*raster, int32 level, int32 lockMode\\)\\s*\\{)", r"\\1\\n    krosaRasterLockCount++;", "rasterLock")
-inject_once(r"(rasterUnlock\\(Raster \\*raster, int32 level\\)\\s*\\{)", r"\\1\\n    krosaRasterUnlockCount++;", "rasterUnlock")
+inject_once(r"(rasterCreateTexture\(Raster \*raster\)\s*\{)", r"\1\n    krosaRasterCreateCount++; krosaUploadWidth=raster->width; krosaUploadHeight=raster->height; krosaUploadFormat=raster->format;", "rasterCreateTexture")
+inject_once(r"(rasterLock\(Raster \*raster, int32 level, int32 lockMode\)\s*\{)", r"\1\n    krosaRasterLockCount++;", "rasterLock")
+inject_once(r"(rasterUnlock\(Raster \*raster, int32 level\)\s*\{)", r"\1\n    krosaRasterUnlockCount++;", "rasterUnlock")
 inject_once(
-    r"(glTexImage2D\\s*\\(\\s*GL_TEXTURE_2D\\s*,\\s*level\\s*,\\s*natras->internalFormat\\s*,.*?raster->pixels\\s*\\);)",
-    r"\\1\\n        if(level == 0){ krosaUploadWidth=raster->width; krosaUploadHeight=raster->height; krosaUploadFormat=natras->internalFormat; krosaUploadError=glGetError(); }",
+    r"(glTexImage2D\s*\(\s*GL_TEXTURE_2D\s*,\s*level\s*,\s*natras->internalFormat\s*,.*?raster->pixels\s*\);)",
+    r"\1\n        if(level == 0){ krosaUploadWidth=raster->width; krosaUploadHeight=raster->height; krosaUploadFormat=natras->internalFormat; krosaUploadError=glGetError(); }",
     "glTexImage2D upload",
     re.DOTALL
 )
