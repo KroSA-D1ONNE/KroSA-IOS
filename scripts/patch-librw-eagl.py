@@ -234,25 +234,25 @@ p.write_text(
     '"#define ATTRIB_POS 0\\n"\n'
     '"#define ATTRIB_COLOR 2\\n"\n'
     '"#define ATTRIB_TEXCOORDS0 5\\n"\n'
-
-
-
+    '"attribute vec4 in_color;\\n"\n'
+    '"attribute vec2 in_tex0;\\n"\n'
     '"uniform mat4 u_proj;\\n"\n'
     '"uniform mat4 u_view;\\n"\n'
     '"uniform mat4 u_world;\\n"\n'
     '"uniform vec4 u_matColor;\\n"\n'
-
-
-
     ';\n'
 )
 p = ROOT / "src/gl/shaders/default_vs_gl.inc"
 p.write_text(
     'const char *default_vert_src =\n'
+    '"attribute vec3 in_pos;\\n"\n'
+    '"varying vec4 v_color;\\n"\n'
+    '"varying vec2 v_tex0;\\n"\n'
+    '"varying float v_fog;\\n"\n'
     '"void main(void)\\n"\n'
     '"{\\n"\n'
     '"    gl_Position = u_proj * u_view * u_world * vec4(in_pos, 1.0);\\n"\n'
-    '"    v_color = in_color * u_matColor;\\n"\n'
+    '"    v_color = in_color;\\n"\n'
     '"    v_tex0 = in_tex0;\\n"\n'
     '"    v_fog = 0.0;\\n"\n'
     '"}\\n"\n'
