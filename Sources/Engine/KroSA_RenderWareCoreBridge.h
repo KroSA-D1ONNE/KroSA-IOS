@@ -24,6 +24,8 @@ void krosaLibrwGL3Shutdown(void);
 /// Sets the optional user-provided DFF path; the file is streamed only after GL3 is ready.
 void krosaLibrwGL3SetDFFPath(const char *path);
 int krosaGetLastGeometryInitStatus(void);
+/// DFF load status: 1 loaded, negative stream/path error, positive validation code otherwise.
+int krosaGetLastDFFValidationStatus(void);
 
 /// Bit flags captured inside librw defaultRenderCB before/after glDrawElements.
 int krosaGetLastGeometryDrawFlags(void);
