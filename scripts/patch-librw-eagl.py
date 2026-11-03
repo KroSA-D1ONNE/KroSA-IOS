@@ -81,15 +81,15 @@ edit("src/gl/gl3device.cpp", [
 # useful without requiring access to the iOS device console.
 edit("src/gl/gl3device.cpp", [
     ('extern "C" int krosaGetEAGLInitStatus(void) { return krosaEAGLInitStatus; }',
-     'extern "C" int krosaGetEAGLInitStatus(void) { return krosaEAGLInitStatus; }\\nextern "C" void krosaSetEAGLShaderStatus(int status) { krosaEAGLInitStatus = status; }')
+     'extern "C" int krosaGetEAGLInitStatus(void) { return krosaEAGLInitStatus; }\nextern "C" void krosaSetEAGLShaderStatus(int status) { krosaEAGLInitStatus = status; }')
 ])
 
 edit("src/gl/gl3shader.cpp", [
-    ('namespace gl3 {\\n', 'namespace gl3 {\\n\\nextern "C" void krosaSetEAGLShaderStatus(int status);\\n'),
-    ('if(!success){\\n\\t\\tprintShaderSource(src);',
-     'if(!success){\\n\\t\\tkrosaSetEAGLShaderStatus(type == GL_VERTEX_SHADER ? -311 : -312);\\n\\t\\tprintShaderSource(src);'),
-    ('if(!success){\\n\\t\\tfprintf(stderr, "Error in program\\\\n");',
-     'if(!success){\\n\\t\\tkrosaSetEAGLShaderStatus(-313);\\n\\t\\tfprintf(stderr, "Error in program\\\\n");')
+    ('namespace gl3 {\n', 'namespace gl3 {\n\nextern "C" void krosaSetEAGLShaderStatus(int status);\n'),
+    ('if(!success){\n\t\tprintShaderSource(src);',
+     'if(!success){\n\t\tkrosaSetEAGLShaderStatus(type == GL_VERTEX_SHADER ? -311 : -312);\n\t\tprintShaderSource(src);'),
+    ('if(!success){\n\t\tfprintf(stderr, "Error in program\\n");',
+     'if(!success){\n\t\tkrosaSetEAGLShaderStatus(-313);\n\t\tfprintf(stderr, "Error in program\\n");')
 ])
 
 edit("src/engine.cpp", [
