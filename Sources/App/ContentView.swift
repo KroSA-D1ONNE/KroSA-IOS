@@ -120,6 +120,7 @@ struct ContentView: View {
     }
 
     private func refreshDataStatus() {
+        try? GameFilesDirectory.prepare()
         try? GameDataBootstrap.provisionBundledText()
         dataReport = GameDataBootstrap.inspect()
     }
